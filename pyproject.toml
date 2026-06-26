@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "terminal-annotator"
+version = "0.1.0"
+description = "Terminal-side annotation tool for Linux terminal review workflows"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Terminal Annotator contributors" }]
+license = { text = "MIT" }
+dependencies = []
+keywords = ["terminal", "terminator", "annotations", "cli", "gtk"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: X11 Applications :: GTK",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Software Development",
+  "Topic :: Terminals",
+]
+
+[project.optional-dependencies]
+terminator = ["PyGObject"]
+
+[project.scripts]
+terminal-ann = "terminal_annotator.cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["terminal_annotator*"]
