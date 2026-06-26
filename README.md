@@ -18,6 +18,8 @@ Press Enter manually
 
 The first adapter targets Terminator on Linux. The core package is terminal-agnostic and stores annotation data outside the project directory in XDG runtime/cache storage.
 
+See [RELEASE_NOTES.md](RELEASE_NOTES.md) for the initial public release summary.
+
 ## Status
 
 This is early local tooling, but the core workflow is usable.
