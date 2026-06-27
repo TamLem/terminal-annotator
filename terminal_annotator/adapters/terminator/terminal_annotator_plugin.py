@@ -163,7 +163,9 @@ if plugin is not None:
 
                 if result.clear_pending:
                     clear_pending_annotations(session_id)
-                save_annotation(session_id, selected_text, result.comment, metadata)
+                save_metadata = dict(metadata)
+                save_metadata.update(result.metadata)
+                save_annotation(session_id, selected_text, result.comment, save_metadata)
             except Exception as exc:
                 show_error(f"Could not save annotation: {exc}", parent=parent)
 

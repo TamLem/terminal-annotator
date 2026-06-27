@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import threading
+from dataclasses import dataclass, field
+from typing import Any
+from uuid import uuid4
+
+from terminal_annotator.core.annotation import now_iso
 
 
 @dataclass(slots=True)
 class AnnotationDialogResult:
     comment: str
     clear_pending: bool = False
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 def _load_gtk():
@@ -110,6 +116,19 @@ def ask_for_comment(
     hint.set_markup(GLib.markup_escape_text("Ctrl+Enter saves. Enter adds a new line."))
     outer.pack_start(hint, False, False, 0)
 
+    voice_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+    record_button = Gtk.Button(label="Record voice")
+    stop_button = Gtk.Button(label="Stop")
+    stop_button.set_sensitive(False)
+    voice_status = Gtk.Label()
+    voice_status.set_xalign(0)
+    voice_status.set_hexpand(True)
+    voice_status.get_style_context().add_class("dim-label")
+    voice_box.pack_start(record_button, False, False, 0)
+    voice_box.pack_start(stop_button, False, False, 0)
+    voice_box.pack_start(voice_status, True, True, 0)
+    outer.pack_start(voice_box, False, False, 0)
+
     clear_pending_check = None
     if pending_count > 0:
         clear_pending_check = Gtk.CheckButton(
@@ -120,10 +139,115 @@ def ask_for_comment(
         outer.pack_start(clear_pending_check, False, False, 0)
 
     comment_buffer = comment_view.get_buffer()
+    dialog_alive = {"value": True}
+    recording_state: dict[str, Any] = {"recorder": None, "path": None}
+    voice_busy = {"value": False}
+    result_metadata: dict[str, Any] = {}
 
     def update_save_state(*_args):
         start, end = comment_buffer.get_bounds()
-        save_button.set_sensitive(bool(comment_buffer.get_text(start, end, True).strip()))
+        has_comment = bool(comment_buffer.get_text(start, end, True).strip())
+        save_button.set_sensitive(has_comment and not voice_busy["value"])
+
+    def set_voice_status(message: str) -> None:
+        voice_status.set_text(message)
+
+    def set_voice_controls(recording: bool = False, transcribing: bool = False) -> None:
+        voice_busy["value"] = recording or transcribing
+        record_button.set_sensitive(not recording and not transcribing)
+        stop_button.set_sensitive(recording)
+        update_save_state()
+
+    def start_recording(_button) -> None:
+        from terminal_annotator.adapters.terminator.audio_recording import (
+            AudioRecordingError,
+            start_audio_recording,
+        )
+        from terminal_annotator.core.store import audio_dir
+
+        audio_path = audio_dir() / f"voice-{uuid4().hex}.wav"
+        try:
+            recorder = start_audio_recording(audio_path)
+        except AudioRecordingError as exc:
+            set_voice_status(str(exc))
+            return
+        recording_state["recorder"] = recorder
+        recording_state["path"] = audio_path
+        set_voice_controls(recording=True)
+        set_voice_status(f"Recording with {recorder.command_name}...")
+
+    def stop_recording(_button) -> None:
+        recorder = recording_state.get("recorder")
+        audio_path = recording_state.get("path")
+        recording_state["recorder"] = None
+        recording_state["path"] = None
+        set_voice_controls(transcribing=True)
+        set_voice_status("Transcribing...")
+        try:
+            if recorder is not None:
+                recorder.stop()
+        except Exception as exc:  # noqa: BLE001 - process errors vary by recorder.
+            set_voice_controls()
+            set_voice_status(f"Could not stop recording: {exc}")
+            return
+
+        if audio_path is None:
+            set_voice_controls()
+            set_voice_status("No recording was captured.")
+            return
+
+        thread = threading.Thread(
+            target=transcribe_recording,
+            args=(audio_path,),
+            daemon=True,
+        )
+        thread.start()
+
+    def transcribe_recording(audio_path) -> None:
+        try:
+            from terminal_annotator.adapters.transcription.litellm_provider import (
+                transcribe_audio,
+            )
+            from terminal_annotator.core.transcription import (
+                transcription_config_from_env,
+            )
+
+            result = transcribe_audio(audio_path, transcription_config_from_env())
+        except Exception as exc:  # noqa: BLE001 - provider/network errors vary.
+            GLib.idle_add(transcription_failed, str(exc))
+            return
+        GLib.idle_add(transcription_finished, result.text, result.to_metadata())
+
+    def transcription_finished(text: str, metadata: dict[str, Any]) -> bool:
+        if not dialog_alive["value"]:
+            return False
+        append_comment_text(text)
+        voice_metadata = dict(metadata)
+        voice_metadata["transcribed_at"] = now_iso()
+        result_metadata["voice"] = voice_metadata
+        set_voice_controls()
+        set_voice_status("Transcript added.")
+        update_save_state()
+        return False
+
+    def transcription_failed(message: str) -> bool:
+        if not dialog_alive["value"]:
+            return False
+        set_voice_controls()
+        set_voice_status(f"Transcription failed: {message}")
+        return False
+
+    def append_comment_text(text: str) -> None:
+        text = text.strip()
+        if not text:
+            return
+        start, end = comment_buffer.get_bounds()
+        existing = comment_buffer.get_text(start, end, True)
+        if existing.strip():
+            insert_text = text if existing.endswith("\n") else f"\n{text}"
+            comment_buffer.insert(end, insert_text)
+        else:
+            comment_buffer.set_text(text)
 
     def maybe_save(_widget, event):
         is_enter = event.keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
@@ -137,9 +261,19 @@ def ask_for_comment(
 
     comment_buffer.connect("changed", update_save_state)
     comment_view.connect("key-press-event", maybe_save)
+    record_button.connect("clicked", start_recording)
+    stop_button.connect("clicked", stop_recording)
     dialog.show_all()
     comment_view.grab_focus()
     response = dialog.run()
+    dialog_alive["value"] = False
+
+    recorder = recording_state.get("recorder")
+    if recorder is not None:
+        try:
+            recorder.stop()
+        except Exception:
+            pass
 
     result = None
     if response == Gtk.ResponseType.OK:
@@ -147,7 +281,11 @@ def ask_for_comment(
         comment = comment_buffer.get_text(start, end, True).strip()
         clear_pending = bool(clear_pending_check and clear_pending_check.get_active())
         if comment:
-            result = AnnotationDialogResult(comment=comment, clear_pending=clear_pending)
+            result = AnnotationDialogResult(
+                comment=comment,
+                clear_pending=clear_pending,
+                metadata=result_metadata,
+            )
 
     dialog.destroy()
     return result

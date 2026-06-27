@@ -40,6 +40,10 @@ def sessions_dir() -> Path:
     return storage_root() / "sessions"
 
 
+def audio_dir() -> Path:
+    return storage_root() / "audio"
+
+
 def session_path(session_id: str) -> Path:
     safe_id = "".join(ch for ch in session_id if ch.isalnum() or ch in {"-", "_"})
     if not safe_id:
