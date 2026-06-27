@@ -17,7 +17,13 @@ class CliTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tempdir.cleanup)
-        self.env_patch = patch.dict(os.environ, {"XDG_RUNTIME_DIR": self.tempdir.name})
+        self.env_patch = patch.dict(
+            os.environ,
+            {
+                "XDG_RUNTIME_DIR": self.tempdir.name,
+                "XDG_CONFIG_HOME": self.tempdir.name,
+            },
+        )
         self.env_patch.start()
         self.addCleanup(self.env_patch.stop)
 
@@ -67,7 +73,7 @@ class CliTests(unittest.TestCase):
         )
 
         with patch(
-            "terminal_annotator.adapters.transcription.litellm_provider.transcribe_audio",
+            "terminal_annotator.adapters.transcription.transcribe_audio",
             return_value=result,
         ):
             code, stdout, stderr = self.run_cli(["transcribe", audio_path])
@@ -82,7 +88,7 @@ class CliTests(unittest.TestCase):
             handle.write(b"fake wav")
 
         with patch(
-            "terminal_annotator.adapters.transcription.litellm_provider.transcribe_audio",
+            "terminal_annotator.adapters.transcription.transcribe_audio",
             side_effect=TranscriptionError("missing key"),
         ):
             code, stdout, stderr = self.run_cli(["transcribe", audio_path])

@@ -12,7 +12,7 @@ VOICE_PROVIDER=""
 VOICE_MODEL="openai/whisper-1"
 VOICE_FALLBACKS=""
 VOICE_BASE_URL=""
-VOICE_API_KEY_ENV="OPENAI_API_KEY"
+VOICE_API_KEY=""
 
 if [[ $# -gt 0 ]]; then
   echo "This installer is interactive and does not accept arguments." >&2
@@ -55,7 +55,7 @@ configure_voice_interactive() {
       VOICE_PROVIDER="vercel-ai-gateway"
       VOICE_MODEL="$(prompt_default "Transcription model" "openai/whisper-1")"
       VOICE_BASE_URL="$(prompt_default "Vercel AI Gateway transcription URL" "https://ai-gateway.vercel.sh/v4/ai/transcription-model")"
-      VOICE_API_KEY_ENV="$(prompt_default "API key environment variable" "AI_GATEWAY_API_KEY")"
+      VOICE_API_KEY="$(prompt_default "Vercel AI Gateway API key" "")"
       VOICE_FALLBACKS=""
       ;;
     *)
@@ -63,7 +63,7 @@ configure_voice_interactive() {
       VOICE_MODEL="$(prompt_default "LiteLLM transcription model or proxy alias" "openai/whisper-1")"
       VOICE_FALLBACKS="$(prompt_default "Fallback models, comma-separated" "")"
       VOICE_BASE_URL="$(prompt_default "LiteLLM proxy URL, blank for direct SDK" "")"
-      VOICE_API_KEY_ENV="$(prompt_default "API key environment variable" "OPENAI_API_KEY")"
+      VOICE_API_KEY="$(prompt_default "API key, blank to use provider environment variables" "")"
       if prompt_yes_no "Install LiteLLM with pip --user" "y"; then
         WITH_VOICE=1
       fi
@@ -84,9 +84,6 @@ if [[ "$VOICE_PROVIDER" == "vercel-ai-gateway" ]]; then
   if [[ -z "$VOICE_BASE_URL" ]]; then
     VOICE_BASE_URL="https://ai-gateway.vercel.sh/v4/ai/transcription-model"
   fi
-  if [[ "$VOICE_API_KEY_ENV" == "OPENAI_API_KEY" ]]; then
-    VOICE_API_KEY_ENV="AI_GATEWAY_API_KEY"
-  fi
 fi
 
 mkdir -p "$PLUGIN_DIR"
@@ -101,7 +98,7 @@ fi
 
 if [[ "$CONFIGURE_VOICE" -eq 1 ]]; then
   mkdir -p "$CONFIG_DIR"
-  python3 - "$CONFIG_FILE" "$VOICE_PROVIDER" "$VOICE_MODEL" "$VOICE_FALLBACKS" "$VOICE_BASE_URL" "$VOICE_API_KEY_ENV" <<'PY'
+  python3 - "$CONFIG_FILE" "$VOICE_PROVIDER" "$VOICE_MODEL" "$VOICE_FALLBACKS" "$VOICE_BASE_URL" "$VOICE_API_KEY" <<'PY'
 from __future__ import annotations
 
 import json
@@ -114,7 +111,7 @@ provider = sys.argv[2]
 model = sys.argv[3]
 fallbacks = [item.strip() for item in sys.argv[4].split(",") if item.strip()]
 base_url = sys.argv[5].strip() or None
-api_key_env = sys.argv[6].strip() or None
+api_key = sys.argv[6].strip() or None
 
 data = {}
 if path.exists():
@@ -133,8 +130,8 @@ if fallbacks:
     voice["fallbacks"] = fallbacks
 if base_url:
     voice["base_url"] = base_url
-if api_key_env:
-    voice["api_key_env"] = api_key_env
+if api_key:
+    voice["api_key"] = api_key
 
 data["voice"] = voice
 path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")

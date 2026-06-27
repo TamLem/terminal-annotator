@@ -124,6 +124,44 @@ class TranscriptionConfigTests(unittest.TestCase):
         )
         self.assertEqual(config.api_key, "vercel-key")
 
+    def test_reads_direct_api_key_from_file_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            path = Path(tempdir) / "config.json"
+            path.write_text(
+                """{
+  "voice": {
+    "provider": "vercel-ai-gateway",
+    "model": "openai/whisper-1",
+    "api_key": "direct-key"
+  }
+}
+""",
+                encoding="utf-8",
+            )
+
+            config = transcription_config_from_env({}, path=path)
+
+        self.assertEqual(config.api_key, "direct-key")
+
+    def test_treats_non_env_api_key_env_as_legacy_literal_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            path = Path(tempdir) / "config.json"
+            path.write_text(
+                """{
+  "voice": {
+    "provider": "vercel-ai-gateway",
+    "model": "openai/whisper-1",
+    "api_key_env": "vck_actual_key_value"
+  }
+}
+""",
+                encoding="utf-8",
+            )
+
+            config = transcription_config_from_env({}, path=path)
+
+        self.assertEqual(config.api_key, "vck_actual_key_value")
+
 
 if __name__ == "__main__":
     unittest.main()

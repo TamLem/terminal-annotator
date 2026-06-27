@@ -108,7 +108,7 @@ def transcription_config_from_env(
             _empty_to_none(source.get("TERMINAL_ANNOTATOR_TRANSCRIBE_API_KEY"))
             or _empty_to_none(source.get("TERMINAL_ANNOTATOR_LITELLM_API_KEY"))
             or _empty_to_none(str(voice_config.get("api_key") or ""))
-            or _key_from_named_env(source, api_key_env)
+            or _key_from_named_env_or_literal(source, api_key_env)
         ),
         api_key_env=api_key_env,
     )
@@ -145,7 +145,21 @@ def _fallbacks_from_config(data: dict[str, Any]) -> list[str]:
     return []
 
 
-def _key_from_named_env(source: dict[str, str], name: str | None) -> str | None:
+def _key_from_named_env_or_literal(source: dict[str, str], name: str | None) -> str | None:
     if not name:
         return None
-    return _empty_to_none(source.get(name))
+    value = _empty_to_none(source.get(name))
+    if value:
+        return value
+    if not _looks_like_env_name(name):
+        return name
+    return None
+
+
+def _looks_like_env_name(value: str) -> bool:
+    if not value:
+        return False
+    first = value[0]
+    if not (first.isalpha() or first == "_"):
+        return False
+    return all(ch.isupper() or ch.isdigit() or ch == "_" for ch in value)

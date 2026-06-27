@@ -156,6 +156,7 @@ Example config:
 ```
 
 Keep provider secrets in the referenced environment variable, for example `OPENAI_API_KEY`, or use LiteLLM's normal provider-specific environment variables. Environment variables like `TERMINAL_ANNOTATOR_TRANSCRIBE_MODEL` still work as temporary overrides.
+The installer stores the entered API key directly in `config.json` and sets file permissions to `0600`. Advanced users can manually use `api_key_env` instead.
 
 Example Vercel config:
 
@@ -165,7 +166,7 @@ Example Vercel config:
     "provider": "vercel-ai-gateway",
     "model": "openai/whisper-1",
     "base_url": "https://ai-gateway.vercel.sh/v4/ai/transcription-model",
-    "api_key_env": "AI_GATEWAY_API_KEY"
+    "api_key": "..."
   }
 }
 ```
