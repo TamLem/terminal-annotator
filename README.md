@@ -181,6 +181,8 @@ The dialog uses the first available recorder command in this order:
 2. `arecord`
 3. `ffmpeg`
 
+Recordings are captured as speech-oriented WAV: mono, 16 kHz, 16-bit PCM. This keeps Vercel AI Gateway uploads much smaller than default stereo 44.1 kHz WAV while staying compatible with transcription providers.
+
 Recorded audio is stored under the existing runtime/cache storage root in `audio/`. It is attached as annotation metadata; inserted annotations still use the transcribed text from `comment`.
 
 ## Development CLI

@@ -8,6 +8,9 @@ from pathlib import Path
 
 from terminal_annotator.core.logging import log_event
 
+SPEECH_CHANNELS = "1"
+SPEECH_SAMPLE_RATE = "16000"
+
 
 class AudioRecordingError(RuntimeError):
     """Raised when microphone recording cannot start or stop."""
@@ -66,11 +69,43 @@ def start_audio_recording(path: Path) -> AudioRecorder:
 
 def _recording_command(path: Path) -> list[str]:
     if shutil.which("parecord"):
-        return ["parecord", "--file-format=wav", str(path)]
+        return [
+            "parecord",
+            "--file-format=wav",
+            f"--channels={SPEECH_CHANNELS}",
+            f"--rate={SPEECH_SAMPLE_RATE}",
+            str(path),
+        ]
     if shutil.which("arecord"):
-        return ["arecord", "-q", "-f", "cd", "-t", "wav", str(path)]
+        return [
+            "arecord",
+            "-q",
+            "-f",
+            "S16_LE",
+            "-c",
+            SPEECH_CHANNELS,
+            "-r",
+            SPEECH_SAMPLE_RATE,
+            "-t",
+            "wav",
+            str(path),
+        ]
     if shutil.which("ffmpeg"):
-        return ["ffmpeg", "-y", "-f", "pulse", "-i", "default", str(path)]
+        return [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "pulse",
+            "-i",
+            "default",
+            "-ac",
+            SPEECH_CHANNELS,
+            "-ar",
+            SPEECH_SAMPLE_RATE,
+            "-sample_fmt",
+            "s16",
+            str(path),
+        ]
     message = "No supported audio recorder found. Install parecord, arecord, or ffmpeg."
     log_event("audio_recording_no_supported_command")
     raise AudioRecordingError(message)
