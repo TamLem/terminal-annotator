@@ -26,6 +26,7 @@ classifiers = [
 
 [project.optional-dependencies]
 terminator = ["PyGObject"]
+voice = ["litellm"]
 
 [project.scripts]
 terminal-ann = "terminal_annotator.cli.main:main"

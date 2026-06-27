@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from terminal_annotator.cli.main import main
+from terminal_annotator.core.transcription import TranscriptionError, TranscriptionResult
 
 
 class CliTests(unittest.TestCase):
@@ -50,6 +51,43 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(stdout, "")
         self.assertIn("No pending annotations", stderr)
+
+    def test_transcribe_prints_transcript(self) -> None:
+        audio_path = os.path.join(self.tempdir.name, "note.wav")
+        with open(audio_path, "wb") as handle:
+            handle.write(b"fake wav")
+
+        result = TranscriptionResult(
+            text="voice transcript",
+            provider="litellm",
+            model="openai/whisper-1",
+            audio_path=audio_path,
+        )
+
+        with patch(
+            "terminal_annotator.adapters.transcription.litellm_provider.transcribe_audio",
+            return_value=result,
+        ):
+            code, stdout, stderr = self.run_cli(["transcribe", audio_path])
+
+        self.assertEqual(code, 0, stderr)
+        self.assertEqual(stdout, "voice transcript\n")
+        self.assertEqual(stderr, "")
+
+    def test_transcribe_reports_provider_error(self) -> None:
+        audio_path = os.path.join(self.tempdir.name, "note.wav")
+        with open(audio_path, "wb") as handle:
+            handle.write(b"fake wav")
+
+        with patch(
+            "terminal_annotator.adapters.transcription.litellm_provider.transcribe_audio",
+            side_effect=TranscriptionError("missing key"),
+        ):
+            code, stdout, stderr = self.run_cli(["transcribe", audio_path])
+
+        self.assertEqual(code, 1)
+        self.assertEqual(stdout, "")
+        self.assertIn("Transcription failed: missing key", stderr)
 
 
 if __name__ == "__main__":

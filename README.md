@@ -121,6 +121,7 @@ python3 -m terminal_annotator.cli.main --help
 python3 -m terminal_annotator.cli.main --storage-root
 python3 -m terminal_annotator.cli.main list
 python3 -m terminal_annotator.cli.main add --session demo --text "selected output" --comment "my note"
+python3 -m terminal_annotator.cli.main transcribe ./note.wav
 python3 -m terminal_annotator.cli.main format --session demo
 python3 -m terminal_annotator.cli.main clear --session demo
 python3 -m terminal_annotator.cli.main cleanup
@@ -134,6 +135,8 @@ terminal-ann format --session demo
 terminal-ann clear --session demo
 terminal-ann cleanup
 ```
+
+Voice transcription is optional and requires the `voice` extra plus provider credentials supported by LiteLLM.
 
 ## Storage
 
