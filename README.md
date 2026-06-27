@@ -74,6 +74,10 @@ The tool should work best with CLI apps that allow normal terminal text selectio
 - Keyboard shortcuts:
   - `Ctrl+Shift+A`: annotate selected text.
   - `Ctrl+Shift+Y`: insert pending annotations.
+- Optional voice annotation:
+  - Record from the annotation dialog.
+  - Transcribe through LiteLLM.
+  - Insert the transcript into the existing comment box before saving.
 - Theme-aware annotation dialog that follows the active terminal profile where possible.
 - Debug CLI for listing, formatting, adding, clearing, and cleaning up stored annotations.
 
@@ -85,6 +89,7 @@ Requirements:
 - Terminator.
 - Python 3.10+.
 - GTK/PyGObject available to Terminator.
+- Optional for voice: LiteLLM provider credentials and one recorder command: `parecord`, `arecord`, or `ffmpeg`.
 
 Install the Terminator plugin locally:
 
@@ -112,6 +117,40 @@ Uninstall:
 ./scripts/uninstall-terminator-plugin.sh
 ```
 
+## Voice Annotation
+
+Voice annotation is optional. It records audio from the annotation dialog, transcribes it through LiteLLM, then inserts the transcript into the normal comment editor so you can review and edit before saving.
+
+Install the optional dependency in a package/development environment:
+
+```bash
+python3 -m pip install "terminal-annotator[voice]"
+```
+
+Configure a LiteLLM-supported transcription model:
+
+```bash
+export TERMINAL_ANNOTATOR_TRANSCRIBE_PROVIDER=litellm
+export TERMINAL_ANNOTATOR_TRANSCRIBE_MODEL=openai/whisper-1
+export TERMINAL_ANNOTATOR_TRANSCRIBE_FALLBACKS=groq/whisper-large-v3,openai/whisper-1
+export OPENAI_API_KEY=...
+```
+
+Optional LiteLLM proxy settings:
+
+```bash
+export TERMINAL_ANNOTATOR_LITELLM_BASE_URL=http://127.0.0.1:4000
+export TERMINAL_ANNOTATOR_LITELLM_API_KEY=...
+```
+
+The dialog uses the first available recorder command in this order:
+
+1. `parecord`
+2. `arecord`
+3. `ffmpeg`
+
+Recorded audio is stored under the existing runtime/cache storage root in `audio/`. It is attached as annotation metadata; inserted annotations still use the transcribed text from `comment`.
+
 ## Development CLI
 
 The CLI is primarily for debugging storage and formatting.
@@ -121,6 +160,7 @@ python3 -m terminal_annotator.cli.main --help
 python3 -m terminal_annotator.cli.main --storage-root
 python3 -m terminal_annotator.cli.main list
 python3 -m terminal_annotator.cli.main add --session demo --text "selected output" --comment "my note"
+python3 -m terminal_annotator.cli.main add --session demo --text "selected output" --comment "voice note" --audio-path ./note.wav
 python3 -m terminal_annotator.cli.main transcribe ./note.wav
 python3 -m terminal_annotator.cli.main format --session demo
 python3 -m terminal_annotator.cli.main clear --session demo
@@ -131,6 +171,7 @@ If installed as a package, the `terminal-ann` entry point exposes the same comma
 
 ```bash
 terminal-ann list
+terminal-ann transcribe ./note.wav
 terminal-ann format --session demo
 terminal-ann clear --session demo
 terminal-ann cleanup
@@ -171,12 +212,16 @@ terminal_annotator/
     runtime/cache storage
     formatter
     cleanup
+    transcription config
   adapters/
     terminator/
       right-click menu plugin
       selected-text extraction
       GTK annotation dialog
       terminal input insertion
+      optional voice recording
+    transcription/
+      LiteLLM provider
   cli/
     debug commands
 ```
@@ -200,6 +245,7 @@ Suggested manual checks in Terminator:
 3. Repeat in split panes and confirm pending annotations stay pane-local.
 4. Test inside OpenAI Codex CLI.
 5. Test inside Opencode using `Shift` before text selection.
+6. Optional voice: record a short note, confirm the transcript appears in the comment box before saving, then insert it.
 
 ## Limitations
 
@@ -207,6 +253,7 @@ Suggested manual checks in Terminator:
 - GTK/PyGObject behavior can vary by distribution and Terminator version.
 - Clipboard fallback for selected-text extraction is best-effort and only used internally when direct selection APIs are unavailable.
 - Shortcut conflicts can still happen if a local Terminator configuration already uses `Ctrl+Shift+A` or `Ctrl+Shift+Y`.
+- Voice transcription requires local recorder tooling and cloud/API credentials.
 - Compatibility with Claude Code, Aider, and other CLI apps has not been verified yet.
 
 ## License

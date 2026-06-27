@@ -59,6 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_parser.add_argument("--comment", required=True)
     add_parser.add_argument("--terminal", default="cli")
     add_parser.add_argument("--cwd")
+    add_parser.add_argument("--audio-path")
 
     return parser
 
@@ -117,6 +118,12 @@ def main(argv: list[str] | None = None) -> int:
         metadata = {"terminal": args.terminal}
         if args.cwd:
             metadata["cwd"] = args.cwd
+        if args.audio_path:
+            metadata["voice"] = {
+                "audio_path": str(Path(args.audio_path)),
+                "provider": "debug",
+                "model": "manual",
+            }
         annotation = save_annotation(
             args.session,
             args.text,

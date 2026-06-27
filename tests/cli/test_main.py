@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import os
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from terminal_annotator.cli.main import main
+from terminal_annotator.core.store import session_path
 from terminal_annotator.core.transcription import TranscriptionError, TranscriptionResult
 
 
@@ -88,6 +90,31 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(stdout, "")
         self.assertIn("Transcription failed: missing key", stderr)
+
+    def test_add_accepts_audio_path_metadata(self) -> None:
+        audio_path = os.path.join(self.tempdir.name, "note.wav")
+        code, stdout, stderr = self.run_cli(
+            [
+                "add",
+                "--session",
+                "demo",
+                "--text",
+                "selected",
+                "--comment",
+                "comment",
+                "--audio-path",
+                audio_path,
+            ]
+        )
+
+        self.assertEqual(code, 0, stderr)
+        self.assertTrue(stdout.strip())
+
+        data = json.loads(session_path("demo").read_text(encoding="utf-8"))
+        voice = data["annotations"][0]["metadata"]["voice"]
+        self.assertEqual(voice["audio_path"], audio_path)
+        self.assertEqual(voice["provider"], "debug")
+        self.assertEqual(voice["model"], "manual")
 
 
 if __name__ == "__main__":
