@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from terminal_annotator.core.annotation import json_safe_dict
+from terminal_annotator.core.logging import log_event
 
 DEFAULT_TRANSCRIPTION_PROVIDER = "litellm"
 DEFAULT_TRANSCRIPTION_MODEL = "openai/whisper-1"
@@ -81,7 +82,8 @@ def transcription_config_from_env(
     path: Path | None = None,
 ) -> TranscriptionConfig:
     source = env if env is not None else os.environ
-    voice_config = _read_voice_config(path if path is not None else config_path(source))
+    resolved_path = path if path is not None else config_path(source)
+    voice_config = _read_voice_config(resolved_path)
     provider = source.get(
         "TERMINAL_ANNOTATOR_TRANSCRIBE_PROVIDER",
         str(voice_config.get("provider") or DEFAULT_TRANSCRIPTION_PROVIDER),
@@ -95,7 +97,7 @@ def transcription_config_from_env(
     if fallback_override is not None:
         fallbacks = _split_csv(fallback_override)
     api_key_env = _empty_to_none(str(voice_config.get("api_key_env") or ""))
-    return TranscriptionConfig(
+    config = TranscriptionConfig(
         provider=provider,
         model=model,
         fallbacks=fallbacks,
@@ -112,6 +114,17 @@ def transcription_config_from_env(
         ),
         api_key_env=api_key_env,
     )
+    log_event(
+        "transcription_config_loaded",
+        config_path=str(resolved_path),
+        provider=config.provider,
+        model=config.model,
+        fallback_count=len(config.fallbacks),
+        has_base_url=bool(config.base_url),
+        has_api_key=bool(config.api_key),
+        api_key_env=config.api_key_env,
+    )
+    return config
 
 
 def _split_csv(value: str) -> list[str]:

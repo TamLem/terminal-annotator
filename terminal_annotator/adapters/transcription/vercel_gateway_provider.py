@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from terminal_annotator.core.annotation import json_safe_dict
+from terminal_annotator.core.logging import log_event
 from terminal_annotator.core.transcription import (
     DEFAULT_VERCEL_GATEWAY_URL,
     TranscriptionConfig,
@@ -27,21 +28,47 @@ def transcribe_audio(
         raise TranscriptionError(f"unsupported transcription provider: {config.provider}")
     if not config.api_key:
         key_hint = f" in {config.api_key_env}" if config.api_key_env else ""
+        log_event(
+            "transcription_request_missing_key",
+            provider="vercel-ai-gateway",
+            model=config.model,
+            api_key_env=config.api_key_env,
+        )
         raise TranscriptionError(f"missing Vercel AI Gateway API key{key_hint}")
     if not audio_path.exists():
         raise TranscriptionError(f"audio file does not exist: {audio_path}")
     if not audio_path.is_file():
         raise TranscriptionError(f"audio path is not a file: {audio_path}")
 
+    url = config.base_url or DEFAULT_VERCEL_GATEWAY_URL
+    log_event(
+        "transcription_request_started",
+        provider="vercel-ai-gateway",
+        model=config.model,
+        url=url,
+        audio_path=str(audio_path),
+    )
     response = _post_transcription(
-        url=config.base_url or DEFAULT_VERCEL_GATEWAY_URL,
+        url=url,
         api_key=config.api_key,
         model=config.model,
         audio_path=audio_path,
     )
     text = _response_text(response)
     if not text:
+        log_event(
+            "transcription_request_failed",
+            provider="vercel-ai-gateway",
+            model=config.model,
+            error="empty transcript",
+        )
         raise TranscriptionError("Vercel AI Gateway returned an empty transcript")
+    log_event(
+        "transcription_request_succeeded",
+        provider="vercel-ai-gateway",
+        model=config.model,
+        text_length=len(text),
+    )
     return TranscriptionResult(
         text=text,
         provider="vercel-ai-gateway",
@@ -76,10 +103,21 @@ def _post_transcription(
             payload = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace")
+        log_event(
+            "transcription_http_failed",
+            provider="vercel-ai-gateway",
+            status=exc.code,
+            response=details,
+        )
         raise TranscriptionError(
             f"Vercel AI Gateway request failed with HTTP {exc.code}: {details}"
         ) from exc
     except urllib.error.URLError as exc:
+        log_event(
+            "transcription_http_failed",
+            provider="vercel-ai-gateway",
+            error=str(exc.reason),
+        )
         raise TranscriptionError(f"Vercel AI Gateway request failed: {exc.reason}") from exc
 
     try:

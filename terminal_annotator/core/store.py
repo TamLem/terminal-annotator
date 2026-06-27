@@ -15,6 +15,7 @@ from terminal_annotator.core.annotation import (
     json_safe_dict,
     now_iso,
 )
+from terminal_annotator.core.logging import log_event
 
 APP_DIRNAME = "terminal-annotator"
 
@@ -42,6 +43,10 @@ def sessions_dir() -> Path:
 
 def audio_dir() -> Path:
     return storage_root() / "audio"
+
+
+def logs_dir() -> Path:
+    return storage_root() / "logs"
 
 
 def session_path(session_id: str) -> Path:
@@ -111,6 +116,14 @@ def save_annotation(
     )
     session.annotations.append(annotation)
     save_session(session)
+    log_event(
+        "annotation_saved",
+        session_id=session_id,
+        annotation_id=annotation.id,
+        selected_text_length=len(selected_text),
+        comment_length=len(comment.strip()),
+        has_voice=bool(annotation.metadata.get("voice")),
+    )
     return annotation.to_dict()
 
 

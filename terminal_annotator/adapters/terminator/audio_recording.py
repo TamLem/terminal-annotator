@@ -6,6 +6,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from terminal_annotator.core.logging import log_event
+
 
 class AudioRecordingError(RuntimeError):
     """Raised when microphone recording cannot start or stop."""
@@ -19,13 +21,31 @@ class AudioRecorder:
 
     def stop(self, timeout: float = 5.0) -> None:
         if self.process.poll() is not None:
+            log_event(
+                "audio_recording_already_stopped",
+                command=self.command_name,
+                audio_path=str(self.path),
+                returncode=self.process.returncode,
+            )
             return
         self.process.terminate()
         try:
             self.process.wait(timeout=timeout)
+            log_event(
+                "audio_recording_stopped",
+                command=self.command_name,
+                audio_path=str(self.path),
+                returncode=self.process.returncode,
+            )
         except subprocess.TimeoutExpired:
             self.process.kill()
             self.process.wait(timeout=timeout)
+            log_event(
+                "audio_recording_killed",
+                command=self.command_name,
+                audio_path=str(self.path),
+                returncode=self.process.returncode,
+            )
 
 
 def start_audio_recording(path: Path) -> AudioRecorder:
@@ -38,7 +58,9 @@ def start_audio_recording(path: Path) -> AudioRecorder:
             stderr=subprocess.DEVNULL,
         )
     except OSError as exc:
+        log_event("audio_recording_start_failed", command=command[0], error=str(exc))
         raise AudioRecordingError(f"could not start {command[0]}: {exc}") from exc
+    log_event("audio_recording_started", command=command[0], audio_path=str(path))
     return AudioRecorder(process=process, path=path, command_name=command[0])
 
 
@@ -49,6 +71,6 @@ def _recording_command(path: Path) -> list[str]:
         return ["arecord", "-q", "-f", "cd", "-t", "wav", str(path)]
     if shutil.which("ffmpeg"):
         return ["ffmpeg", "-y", "-f", "pulse", "-i", "default", str(path)]
-    raise AudioRecordingError(
-        "No supported audio recorder found. Install parecord, arecord, or ffmpeg."
-    )
+    message = "No supported audio recorder found. Install parecord, arecord, or ffmpeg."
+    log_event("audio_recording_no_supported_command")
+    raise AudioRecordingError(message)

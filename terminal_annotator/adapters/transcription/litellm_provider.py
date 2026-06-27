@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from terminal_annotator.core.annotation import json_safe_dict
+from terminal_annotator.core.logging import log_event
 from terminal_annotator.core.transcription import (
     TranscriptionConfig,
     TranscriptionError,
@@ -40,6 +41,14 @@ def transcribe_audio(
 
     for model in config.model_chain:
         try:
+            log_event(
+                "transcription_request_started",
+                provider="litellm",
+                model=model,
+                audio_path=str(audio_path),
+                content_type=content_type,
+                has_base_url=bool(config.base_url),
+            )
             response = litellm.transcription(
                 **_request_kwargs(
                     model=model,
@@ -50,6 +59,13 @@ def transcribe_audio(
             text = _response_text(response)
             if not text:
                 raise TranscriptionError("provider returned an empty transcript")
+            log_event(
+                "transcription_request_succeeded",
+                provider="litellm",
+                model=model,
+                text_length=len(text),
+                duration_seconds=_response_duration(response),
+            )
             return TranscriptionResult(
                 text=text,
                 provider="litellm",
@@ -59,6 +75,12 @@ def transcribe_audio(
                 metadata=_response_metadata(response),
             )
         except Exception as exc:  # noqa: BLE001 - provider errors vary by backend.
+            log_event(
+                "transcription_request_failed",
+                provider="litellm",
+                model=model,
+                error=str(exc),
+            )
             errors.append(f"{model}: {exc}")
 
     raise TranscriptionError("LiteLLM transcription failed: " + "; ".join(errors))

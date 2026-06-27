@@ -234,6 +234,16 @@ Annotation statuses:
 
 No annotation files are written to the project directory.
 
+## Logs
+
+Diagnostic logs are written outside the repository under:
+
+```text
+<storage-root>/logs/terminal-annotator.log
+```
+
+The log file is rotated locally and redacts API keys, authorization headers, tokens, secrets, and passwords. It records voice setup/runtime events such as config loading, recorder start/stop, transcription provider requests, success/failure, and annotation saves.
+
 ## Architecture
 
 ```text
