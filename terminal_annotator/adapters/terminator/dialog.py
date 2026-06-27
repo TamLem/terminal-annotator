@@ -116,24 +116,32 @@ def ask_for_comment(
     hint = Gtk.Label()
     hint.set_xalign(0)
     hint.get_style_context().add_class("dim-label")
-    hint.set_markup(GLib.markup_escape_text("Ctrl+Enter saves. Enter adds a new line."))
+    hint.set_markup(
+        GLib.markup_escape_text(
+            "Ctrl+Enter saves. Ctrl+R records/stops voice. Enter adds a new line."
+        )
+    )
     outer.pack_start(hint, False, False, 0)
 
-    voice_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+    voice_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+    spectrum_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+    action_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
     record_button = Gtk.Button()
     record_button.set_image(
         Gtk.Image.new_from_icon_name("media-record-symbolic", Gtk.IconSize.BUTTON)
     )
     record_button.set_tooltip_text("Record voice")
     spectrum_area = Gtk.DrawingArea()
-    spectrum_area.set_size_request(160, 28)
+    spectrum_area.set_size_request(220, 30)
     voice_status = Gtk.Label()
-    voice_status.set_xalign(0)
+    voice_status.set_xalign(0.5)
     voice_status.set_hexpand(True)
     voice_status.get_style_context().add_class("dim-label")
-    voice_box.pack_start(record_button, False, False, 0)
-    voice_box.pack_start(spectrum_area, False, False, 0)
-    voice_box.pack_start(voice_status, True, True, 0)
+    spectrum_row.set_center_widget(spectrum_area)
+    action_row.set_center_widget(record_button)
+    voice_box.pack_start(spectrum_row, False, False, 0)
+    voice_box.pack_start(action_row, False, False, 0)
+    voice_box.pack_start(voice_status, False, False, 0)
     outer.pack_start(voice_box, False, False, 0)
 
     clear_pending_check = None
@@ -315,9 +323,13 @@ def ask_for_comment(
 
     def maybe_save(_widget, event):
         is_enter = event.keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter)
+        keyval = Gdk.keyval_to_lower(event.keyval)
         has_control = bool(event.state & Gdk.ModifierType.CONTROL_MASK)
         if is_enter and has_control and save_button.get_sensitive():
             dialog.response(Gtk.ResponseType.OK)
+            return True
+        if keyval == Gdk.KEY_r and has_control and record_button.get_sensitive():
+            on_record_button_clicked(record_button)
             return True
         return False
 
