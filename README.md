@@ -4,21 +4,44 @@ Terminal Annotator is a Linux terminal-side annotation tool for reviewing termin
 
 It is designed for AI terminal workflows, but it does not depend on any specific AI CLI. You select terminal output, save comments in a small GTK dialog, then insert those pending comments into the prompt when you are ready to continue.
 
-```text
-Select terminal output
-Right-click -> Annotate selected text
-Write a comment
-Save
-
-Later:
-Right-click -> Insert pending annotations
-Review or edit the inserted text
-Press Enter manually
-```
-
 The first adapter targets Terminator on Linux. The core package is terminal-agnostic and stores annotation data outside the project directory in XDG runtime/cache storage.
 
 See [RELEASE_NOTES.md](RELEASE_NOTES.md) for the initial public release summary.
+
+## Usage
+
+Annotate output:
+
+1. Select text in a Terminator pane.
+2. Right-click and choose `Annotate selected text`, or press `Ctrl+Shift+A`.
+3. Add your comment.
+4. Save.
+
+Insert pending annotations:
+
+1. Focus the pane where you want the comments inserted.
+2. Right-click and choose `Insert pending annotations`, or press `Ctrl+Shift+Y`.
+3. Review or edit the inserted text.
+4. Press Enter yourself when ready.
+
+The plugin never auto-submits text.
+
+Clear current session annotations:
+
+- Right-click and choose `Clear session annotations`.
+- This clears annotations for the active pane/session.
+
+Clear previous uninserted annotations while adding a new one:
+
+- If the current session already has pending annotations, the annotation dialog shows a checkbox to clear those pending annotations before saving the new comment.
+- Inserted annotations are left intact.
+
+## Opencode Selection Note
+
+Opencode can capture mouse input before the terminal selection happens. In Terminator, hold `Shift` before selecting text to force normal terminal selection, then annotate as usual.
+
+This is an Opencode interaction detail, not a Terminal Annotator integration.
+
 
 ## Status
 
@@ -88,40 +111,6 @@ Uninstall:
 ```bash
 ./scripts/uninstall-terminator-plugin.sh
 ```
-
-## Usage
-
-Annotate output:
-
-1. Select text in a Terminator pane.
-2. Right-click and choose `Annotate selected text`, or press `Ctrl+Shift+A`.
-3. Add your comment.
-4. Save.
-
-Insert pending annotations:
-
-1. Focus the pane where you want the comments inserted.
-2. Right-click and choose `Insert pending annotations`, or press `Ctrl+Shift+Y`.
-3. Review or edit the inserted text.
-4. Press Enter yourself when ready.
-
-The plugin never auto-submits text.
-
-Clear current session annotations:
-
-- Right-click and choose `Clear session annotations`.
-- This clears annotations for the active pane/session.
-
-Clear previous uninserted annotations while adding a new one:
-
-- If the current session already has pending annotations, the annotation dialog shows a checkbox to clear those pending annotations before saving the new comment.
-- Inserted annotations are left intact.
-
-## Opencode Selection Note
-
-Opencode can capture mouse input before the terminal selection happens. In Terminator, hold `Shift` before selecting text to force normal terminal selection, then annotate as usual.
-
-This is an Opencode interaction detail, not a Terminal Annotator integration.
 
 ## Development CLI
 
