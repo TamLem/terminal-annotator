@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from terminal_annotator.adapters.transcription.vercel_gateway_provider import (
+    _optimized_upload_path,
     transcribe_audio,
 )
 from terminal_annotator.core.transcription import (
@@ -79,6 +80,28 @@ class VercelGatewayProviderTests(unittest.TestCase):
 
         with self.assertRaisesRegex(TranscriptionError, "AI_GATEWAY_API_KEY"):
             transcribe_audio(self.audio_path, config)
+
+    def test_optimizes_wav_to_mp3_when_ffmpeg_exists(self) -> None:
+        mp3_path = self.audio_path.with_suffix(".mp3")
+
+        def fake_run(command, check, stdout, stderr):
+            self.assertEqual(command[0], "ffmpeg")
+            self.assertIn("-b:a", command)
+            mp3_path.write_bytes(b"mp3")
+
+        with patch("shutil.which", return_value="/usr/bin/ffmpeg"), patch(
+            "subprocess.run",
+            side_effect=fake_run,
+        ):
+            upload_path = _optimized_upload_path(self.audio_path)
+
+        self.assertEqual(upload_path, mp3_path)
+
+    def test_uses_original_audio_when_ffmpeg_missing(self) -> None:
+        with patch("shutil.which", return_value=None):
+            upload_path = _optimized_upload_path(self.audio_path)
+
+        self.assertEqual(upload_path, self.audio_path)
 
 
 if __name__ == "__main__":

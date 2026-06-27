@@ -5,6 +5,8 @@ from __future__ import annotations
 import base64
 import json
 import mimetypes
+import shutil
+import subprocess
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -41,18 +43,21 @@ def transcribe_audio(
         raise TranscriptionError(f"audio path is not a file: {audio_path}")
 
     url = config.base_url or DEFAULT_VERCEL_GATEWAY_URL
+    upload_path = _optimized_upload_path(audio_path)
     log_event(
         "transcription_request_started",
         provider="vercel-ai-gateway",
         model=config.model,
         url=url,
         audio_path=str(audio_path),
+        upload_path=str(upload_path),
+        upload_bytes=upload_path.stat().st_size if upload_path.exists() else None,
     )
     response = _post_transcription(
         url=url,
         api_key=config.api_key,
         model=config.model,
-        audio_path=audio_path,
+        audio_path=upload_path,
     )
     text = _response_text(response)
     if not text:
@@ -74,8 +79,71 @@ def transcribe_audio(
         provider="vercel-ai-gateway",
         model=config.model,
         audio_path=str(audio_path),
-        metadata=response,
+        metadata={
+            "upload_path": str(upload_path),
+            "upload_media_type": _content_type(upload_path),
+            "response": response,
+        },
     )
+
+
+def _optimized_upload_path(audio_path: Path) -> Path:
+    if audio_path.suffix.lower() == ".mp3":
+        return audio_path
+    if not shutil.which("ffmpeg"):
+        log_event(
+            "transcription_audio_optimization_skipped",
+            provider="vercel-ai-gateway",
+            reason="ffmpeg not found",
+            audio_path=str(audio_path),
+        )
+        return audio_path
+
+    target = audio_path.with_suffix(".mp3")
+    command = [
+        "ffmpeg",
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        str(audio_path),
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        "-b:a",
+        "32k",
+        str(target),
+    ]
+    try:
+        subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        log_event(
+            "transcription_audio_optimization_failed",
+            provider="vercel-ai-gateway",
+            error=str(exc),
+            audio_path=str(audio_path),
+        )
+        return audio_path
+
+    if not target.exists() or target.stat().st_size <= 0:
+        log_event(
+            "transcription_audio_optimization_failed",
+            provider="vercel-ai-gateway",
+            error="empty optimized file",
+            audio_path=str(audio_path),
+        )
+        return audio_path
+
+    log_event(
+        "transcription_audio_optimized",
+        provider="vercel-ai-gateway",
+        audio_path=str(audio_path),
+        upload_path=str(target),
+        original_bytes=audio_path.stat().st_size,
+        upload_bytes=target.stat().st_size,
+    )
+    return target
 
 
 def _post_transcription(

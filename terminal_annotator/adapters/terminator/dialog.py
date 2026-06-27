@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import math
+import struct
 import threading
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -116,16 +119,20 @@ def ask_for_comment(
     hint.set_markup(GLib.markup_escape_text("Ctrl+Enter saves. Enter adds a new line."))
     outer.pack_start(hint, False, False, 0)
 
-    voice_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-    record_button = Gtk.Button(label="Record voice")
-    stop_button = Gtk.Button(label="Stop")
-    stop_button.set_sensitive(False)
+    voice_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+    record_button = Gtk.Button()
+    record_button.set_image(
+        Gtk.Image.new_from_icon_name("media-record-symbolic", Gtk.IconSize.BUTTON)
+    )
+    record_button.set_tooltip_text("Record voice")
+    spectrum_area = Gtk.DrawingArea()
+    spectrum_area.set_size_request(160, 28)
     voice_status = Gtk.Label()
     voice_status.set_xalign(0)
     voice_status.set_hexpand(True)
     voice_status.get_style_context().add_class("dim-label")
     voice_box.pack_start(record_button, False, False, 0)
-    voice_box.pack_start(stop_button, False, False, 0)
+    voice_box.pack_start(spectrum_area, False, False, 0)
     voice_box.pack_start(voice_status, True, True, 0)
     outer.pack_start(voice_box, False, False, 0)
 
@@ -142,6 +149,8 @@ def ask_for_comment(
     dialog_alive = {"value": True}
     recording_state: dict[str, Any] = {"recorder": None, "path": None}
     voice_busy = {"value": False}
+    spectrum_levels = {"value": [0.08] * 18}
+    spectrum_tick = {"value": 0}
     result_metadata: dict[str, Any] = {}
 
     def update_save_state(*_args):
@@ -154,11 +163,29 @@ def ask_for_comment(
 
     def set_voice_controls(recording: bool = False, transcribing: bool = False) -> None:
         voice_busy["value"] = recording or transcribing
-        record_button.set_sensitive(not recording and not transcribing)
-        stop_button.set_sensitive(recording)
+        record_button.set_sensitive(not transcribing)
+        if recording:
+            record_button.set_image(
+                Gtk.Image.new_from_icon_name(
+                    "media-playback-stop-symbolic",
+                    Gtk.IconSize.BUTTON,
+                )
+            )
+            record_button.set_tooltip_text("Stop recording")
+        else:
+            record_button.set_image(
+                Gtk.Image.new_from_icon_name("media-record-symbolic", Gtk.IconSize.BUTTON)
+            )
+            record_button.set_tooltip_text("Record voice")
         update_save_state()
 
-    def start_recording(_button) -> None:
+    def on_record_button_clicked(_button) -> None:
+        if recording_state.get("recorder") is not None:
+            stop_recording()
+        else:
+            start_recording()
+
+    def start_recording() -> None:
         from terminal_annotator.adapters.terminator.audio_recording import (
             AudioRecordingError,
             start_audio_recording,
@@ -175,8 +202,9 @@ def ask_for_comment(
         recording_state["path"] = audio_path
         set_voice_controls(recording=True)
         set_voice_status(f"Recording with {recorder.command_name}...")
+        GLib.timeout_add(120, update_spectrum)
 
-    def stop_recording(_button) -> None:
+    def stop_recording() -> None:
         recorder = recording_state.get("recorder")
         audio_path = recording_state.get("path")
         recording_state["recorder"] = None
@@ -217,6 +245,42 @@ def ask_for_comment(
             GLib.idle_add(transcription_failed, str(exc))
             return
         GLib.idle_add(transcription_finished, result.text, result.to_metadata())
+
+    def update_spectrum() -> bool:
+        if not dialog_alive["value"]:
+            return False
+        audio_path = recording_state.get("path")
+        if audio_path is not None:
+            spectrum_levels["value"] = _audio_levels(Path(audio_path), 18)
+        else:
+            spectrum_tick["value"] += 1
+            tick = spectrum_tick["value"]
+            spectrum_levels["value"] = [
+                0.08 + 0.08 * math.sin((tick + index) / 2.5)
+                for index in range(18)
+            ]
+        spectrum_area.queue_draw()
+        return recording_state.get("recorder") is not None
+
+    def draw_spectrum(_area, context) -> bool:
+        allocation = spectrum_area.get_allocation()
+        width = max(1, allocation.width)
+        height = max(1, allocation.height)
+        levels = spectrum_levels["value"]
+        bar_width = max(2, width / (len(levels) * 1.6))
+        gap = bar_width * 0.6
+        context.set_source_rgba(0.45, 0.45, 0.45, 0.30)
+        context.rectangle(0, 0, width, height)
+        context.fill()
+        context.set_source_rgba(0.18, 0.72, 0.52, 0.92)
+        x = gap / 2
+        for level in levels:
+            bar_height = max(2, min(height, height * level))
+            y = (height - bar_height) / 2
+            context.rectangle(x, y, bar_width, bar_height)
+            context.fill()
+            x += bar_width + gap
+        return False
 
     def transcription_finished(text: str, metadata: dict[str, Any]) -> bool:
         if not dialog_alive["value"]:
@@ -261,8 +325,8 @@ def ask_for_comment(
 
     comment_buffer.connect("changed", update_save_state)
     comment_view.connect("key-press-event", maybe_save)
-    record_button.connect("clicked", start_recording)
-    stop_button.connect("clicked", stop_recording)
+    record_button.connect("clicked", on_record_button_clicked)
+    spectrum_area.connect("draw", draw_spectrum)
     dialog.show_all()
     comment_view.grab_focus()
     response = dialog.run()
@@ -336,6 +400,41 @@ def _selection_meta_text(selected_text: str) -> str:
     line_word = "line" if line_count == 1 else "lines"
     char_word = "character" if char_count == 1 else "characters"
     return f"{line_count} {line_word}, {char_count} {char_word}"
+
+
+def _audio_levels(path: Path, bar_count: int) -> list[float]:
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, 2)
+            size = handle.tell()
+            if size <= 44:
+                return [0.08] * bar_count
+            read_size = min(8192, size - 44)
+            handle.seek(size - read_size)
+            data = handle.read(read_size)
+    except OSError:
+        return [0.08] * bar_count
+
+    if len(data) < 2:
+        return [0.08] * bar_count
+
+    sample_count = len(data) // 2
+    try:
+        samples = struct.unpack("<" + "h" * sample_count, data[: sample_count * 2])
+    except struct.error:
+        return [0.08] * bar_count
+
+    bucket_size = max(1, sample_count // bar_count)
+    levels: list[float] = []
+    for index in range(bar_count):
+        start = index * bucket_size
+        chunk = samples[start : start + bucket_size]
+        if not chunk:
+            levels.append(0.08)
+            continue
+        peak = max(abs(sample) for sample in chunk) / 32768
+        levels.append(max(0.08, min(1.0, peak * 4)))
+    return levels
 
 
 def _apply_terminal_theme(Gtk, Gdk, terminal_theme: dict[str, str | bool] | None) -> None:
