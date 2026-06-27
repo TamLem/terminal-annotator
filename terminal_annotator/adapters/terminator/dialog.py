@@ -118,7 +118,7 @@ def ask_for_comment(
     hint.get_style_context().add_class("dim-label")
     hint.set_markup(
         GLib.markup_escape_text(
-            "Ctrl+Enter saves. Ctrl+R records/stops voice. Enter adds a new line."
+            "Ctrl+Enter saves. R records/stops voice outside the comment box."
         )
     )
     outer.pack_start(hint, False, False, 0)
@@ -328,7 +328,12 @@ def ask_for_comment(
         if is_enter and has_control and save_button.get_sensitive():
             dialog.response(Gtk.ResponseType.OK)
             return True
-        if keyval == Gdk.KEY_r and has_control and record_button.get_sensitive():
+        if (
+            keyval == Gdk.KEY_r
+            and not has_control
+            and not comment_view.has_focus()
+            and record_button.get_sensitive()
+        ):
             on_record_button_clicked(record_button)
             return True
         return False
