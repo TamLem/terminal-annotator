@@ -56,6 +56,7 @@ Tested:
 
 Not yet tested:
 
+- Voice annotation end-to-end in Terminator.
 - Claude Code.
 - Aider.
 - Other interactive CLI apps.
@@ -177,7 +178,7 @@ terminal-ann clear --session demo
 terminal-ann cleanup
 ```
 
-Voice transcription is optional and requires the `voice` extra plus provider credentials supported by LiteLLM.
+Voice transcription is optional and requires the `voice` extra plus provider credentials supported by LiteLLM. When using the Terminator plugin, LiteLLM must be importable from the Python environment Terminator uses.
 
 ## Storage
 

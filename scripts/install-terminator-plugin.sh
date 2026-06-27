@@ -12,3 +12,4 @@ cp -r terminal_annotator "$PACKAGE_DIR"
 
 echo "Installed Terminal Annotator Terminator plugin."
 echo "Restart Terminator, then enable it under Preferences > Plugins."
+echo "Optional voice annotation requires litellm and provider credentials in Terminator's Python environment."

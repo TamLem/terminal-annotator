@@ -1,5 +1,13 @@
 # Release Notes
 
+## Unreleased
+
+- Added optional LiteLLM-backed voice transcription for annotation comments.
+- Added Record/Stop controls to the Terminator annotation dialog.
+- Added `terminal-ann transcribe <audio-path>` for debugging transcription setup.
+- Added `terminal-ann add --audio-path <path>` for voice metadata fixtures.
+- Added cleanup for audio files referenced by old session files.
+
 ## 0.1.0 - Initial Public Release
 
 Terminal Annotator is now available as an early Linux/Terminator plugin for saving comments on selected terminal output and inserting those comments back into the active terminal input.
