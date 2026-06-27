@@ -55,8 +55,8 @@ def ask_for_comment(
     content = dialog.get_content_area()
     content.set_border_width(0)
 
-    outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-    outer.set_border_width(12)
+    outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+    outer.set_border_width(16)
     outer.get_style_context().add_class("terminal-annotator-surface")
     content.add(outer)
 
@@ -85,6 +85,7 @@ def ask_for_comment(
     preview_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
     preview_scroll.set_shadow_type(Gtk.ShadowType.IN)
     preview_scroll.set_min_content_height(150)
+    _set_margins(preview_scroll, 8)
     preview_scroll.add(preview)
     selected_frame.add(preview_scroll)
 
@@ -110,6 +111,7 @@ def ask_for_comment(
     comment_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
     comment_scroll.set_shadow_type(Gtk.ShadowType.IN)
     comment_scroll.set_min_content_height(140)
+    _set_margins(comment_scroll, 8)
     comment_scroll.add(comment_view)
     comment_frame.add(comment_scroll)
 
@@ -132,7 +134,7 @@ def ask_for_comment(
     )
     record_button.set_tooltip_text("Record voice")
     spectrum_area = Gtk.DrawingArea()
-    spectrum_area.set_size_request(220, 30)
+    spectrum_area.set_size_request(260, 34)
     voice_status = Gtk.Label()
     voice_status.set_xalign(0.5)
     voice_status.set_hexpand(True)
@@ -157,7 +159,8 @@ def ask_for_comment(
     dialog_alive = {"value": True}
     recording_state: dict[str, Any] = {"recorder": None, "path": None}
     voice_busy = {"value": False}
-    spectrum_levels = {"value": [0.08] * 18}
+    spectrum_bar_count = 32
+    spectrum_levels = {"value": [0.08] * spectrum_bar_count}
     spectrum_tick = {"value": 0}
     result_metadata: dict[str, Any] = {}
 
@@ -210,7 +213,7 @@ def ask_for_comment(
         recording_state["path"] = audio_path
         set_voice_controls(recording=True)
         set_voice_status(f"Recording with {recorder.command_name}...")
-        GLib.timeout_add(120, update_spectrum)
+        GLib.timeout_add(70, update_spectrum)
 
     def stop_recording() -> None:
         recorder = recording_state.get("recorder")
@@ -259,14 +262,11 @@ def ask_for_comment(
             return False
         audio_path = recording_state.get("path")
         if audio_path is not None:
-            spectrum_levels["value"] = _audio_levels(Path(audio_path), 18)
+            levels = _audio_levels(Path(audio_path), spectrum_bar_count)
         else:
-            spectrum_tick["value"] += 1
-            tick = spectrum_tick["value"]
-            spectrum_levels["value"] = [
-                0.08 + 0.08 * math.sin((tick + index) / 2.5)
-                for index in range(18)
-            ]
+            levels = _animated_levels(spectrum_tick["value"], spectrum_bar_count)
+        spectrum_tick["value"] += 1
+        spectrum_levels["value"] = _smooth_levels(levels, spectrum_levels["value"])
         spectrum_area.queue_draw()
         return recording_state.get("recorder") is not None
 
@@ -275,17 +275,19 @@ def ask_for_comment(
         width = max(1, allocation.width)
         height = max(1, allocation.height)
         levels = spectrum_levels["value"]
-        bar_width = max(2, width / (len(levels) * 1.6))
-        gap = bar_width * 0.6
-        context.set_source_rgba(0.45, 0.45, 0.45, 0.30)
-        context.rectangle(0, 0, width, height)
+        bar_width = max(2, width / (len(levels) * 2.25))
+        gap = bar_width * 1.25
+        center = height / 2
+        context.set_source_rgba(0.18, 0.72, 0.52, 0.18)
+        context.rectangle(0, center - 0.5, width, 1)
         context.fill()
-        context.set_source_rgba(0.18, 0.72, 0.52, 0.92)
-        x = gap / 2
+        x = (width - ((bar_width + gap) * len(levels) - gap)) / 2
         for level in levels:
-            bar_height = max(2, min(height, height * level))
+            bar_height = max(3, min(height - 2, height * level))
             y = (height - bar_height) / 2
-            context.rectangle(x, y, bar_width, bar_height)
+            alpha = 0.36 + min(0.56, level * 0.52)
+            context.set_source_rgba(0.18, 0.72, 0.52, alpha)
+            _rounded_rect(context, x, y, bar_width, bar_height, bar_width / 2)
             context.fill()
             x += bar_width + gap
         return False
@@ -397,6 +399,30 @@ def _section_frame(Gtk, label: str):
     return frame
 
 
+def _rounded_rect(context, x: float, y: float, width: float, height: float, radius: float) -> None:
+    radius = max(0, min(radius, width / 2, height / 2))
+    context.new_sub_path()
+    context.arc(x + width - radius, y + radius, radius, -math.pi / 2, 0)
+    context.arc(x + width - radius, y + height - radius, radius, 0, math.pi / 2)
+    context.arc(x + radius, y + height - radius, radius, math.pi / 2, math.pi)
+    context.arc(x + radius, y + radius, radius, math.pi, math.pi * 1.5)
+    context.close_path()
+
+
+def _set_margins(widget, amount: int) -> None:
+    for method_name in (
+        "set_margin_top",
+        "set_margin_bottom",
+        "set_margin_start",
+        "set_margin_end",
+        "set_margin_left",
+        "set_margin_right",
+    ):
+        method = getattr(widget, method_name, None)
+        if callable(method):
+            method(amount)
+
+
 def _set_monospace(text_view, Pango) -> None:
     set_monospace = getattr(text_view, "set_monospace", None)
     if callable(set_monospace):
@@ -426,7 +452,7 @@ def _audio_levels(path: Path, bar_count: int) -> list[float]:
             size = handle.tell()
             if size <= 44:
                 return [0.08] * bar_count
-            read_size = min(8192, size - 44)
+            read_size = min(4096, size - 44)
             handle.seek(size - read_size)
             data = handle.read(read_size)
     except OSError:
@@ -450,8 +476,29 @@ def _audio_levels(path: Path, bar_count: int) -> list[float]:
             levels.append(0.08)
             continue
         peak = max(abs(sample) for sample in chunk) / 32768
-        levels.append(max(0.08, min(1.0, peak * 4)))
+        mean_square = sum(sample * sample for sample in chunk) / len(chunk)
+        rms = math.sqrt(mean_square) / 32768
+        level = (peak * 0.35) + (rms * 0.65)
+        levels.append(max(0.08, min(1.0, level * 5.5)))
     return levels
+
+
+def _smooth_levels(current: list[float], previous: list[float]) -> list[float]:
+    if not previous or len(previous) != len(current):
+        return current
+
+    smoothed: list[float] = []
+    for new, old in zip(current, previous):
+        amount = 0.78 if new > old else 0.34
+        smoothed.append(old + (new - old) * amount)
+    return smoothed
+
+
+def _animated_levels(tick: int, bar_count: int) -> list[float]:
+    return [
+        0.10 + 0.08 * (1 + math.sin((tick * 0.72) + index * 0.55)) / 2
+        for index in range(bar_count)
+    ]
 
 
 def _apply_terminal_theme(Gtk, Gdk, terminal_theme: dict[str, str | bool] | None) -> None:
