@@ -101,8 +101,10 @@ Install the Terminator plugin locally:
 Install with voice support:
 
 ```bash
-./scripts/install-terminator-plugin.sh --with-voice --configure-voice
+./scripts/install-terminator-plugin.sh
 ```
+
+The installer is interactive. It asks whether to configure optional voice annotation, then guides you through LiteLLM or Vercel AI Gateway setup.
 
 Then fully restart Terminator and enable the plugin under:
 
@@ -128,18 +130,13 @@ Uninstall:
 
 Voice annotation is optional. It records audio from the annotation dialog, transcribes it through LiteLLM, then inserts the transcript into the normal comment editor so you can review and edit before saving.
 
-The recommended setup is through the install script:
+The recommended setup is through the interactive install script:
 
 ```bash
-./scripts/install-terminator-plugin.sh \
-  --with-voice \
-  --configure-voice \
-  --voice-model openai/whisper-1 \
-  --voice-fallbacks groq/whisper-large-v3,openai/whisper-1 \
-  --voice-api-key-env OPENAI_API_KEY
+./scripts/install-terminator-plugin.sh
 ```
 
-This installs `litellm` with `pip --user`, copies the plugin files, and writes:
+It copies the plugin files, asks whether to configure voice annotation, and writes:
 
 ```text
 ~/.config/terminal-annotator/config.json
@@ -160,16 +157,22 @@ Example config:
 
 Keep provider secrets in the referenced environment variable, for example `OPENAI_API_KEY`, or use LiteLLM's normal provider-specific environment variables. Environment variables like `TERMINAL_ANNOTATOR_TRANSCRIBE_MODEL` still work as temporary overrides.
 
+Example Vercel config:
+
+```json
+{
+  "voice": {
+    "provider": "vercel-ai-gateway",
+    "model": "openai/whisper-1",
+    "base_url": "https://ai-gateway.vercel.sh/v4/ai/transcription-model",
+    "api_key_env": "AI_GATEWAY_API_KEY"
+  }
+}
+```
+
 Optional LiteLLM proxy setup:
 
-```bash
-./scripts/install-terminator-plugin.sh \
-  --with-voice \
-  --configure-voice \
-  --voice-model whisper \
-  --voice-base-url http://127.0.0.1:4000 \
-  --voice-api-key-env TERMINAL_ANNOTATOR_LITELLM_API_KEY
-```
+Choose LiteLLM in the installer, enter your proxy alias as the model, and enter the proxy URL when prompted.
 
 The dialog uses the first available recorder command in this order:
 
@@ -205,7 +208,7 @@ terminal-ann clear --session demo
 terminal-ann cleanup
 ```
 
-Voice transcription is optional and requires LiteLLM plus provider credentials supported by LiteLLM. The install script can install LiteLLM and write the voice config file. When using the Terminator plugin, LiteLLM must be importable from the Python environment Terminator uses.
+Voice transcription is optional. LiteLLM mode requires LiteLLM plus provider credentials supported by LiteLLM. Vercel AI Gateway mode requires an AI Gateway key. The install script can write the voice config file and can install LiteLLM when needed. When using LiteLLM mode in the Terminator plugin, LiteLLM must be importable from the Python environment Terminator uses.
 
 ## Storage
 

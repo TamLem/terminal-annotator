@@ -12,6 +12,7 @@ from terminal_annotator.core.annotation import json_safe_dict
 
 DEFAULT_TRANSCRIPTION_PROVIDER = "litellm"
 DEFAULT_TRANSCRIPTION_MODEL = "openai/whisper-1"
+DEFAULT_VERCEL_GATEWAY_URL = "https://ai-gateway.vercel.sh/v4/ai/transcription-model"
 CONFIG_DIRNAME = "terminal-annotator"
 CONFIG_FILENAME = "config.json"
 
@@ -99,11 +100,13 @@ def transcription_config_from_env(
         model=model,
         fallbacks=fallbacks,
         base_url=(
-            _empty_to_none(source.get("TERMINAL_ANNOTATOR_LITELLM_BASE_URL"))
+            _empty_to_none(source.get("TERMINAL_ANNOTATOR_TRANSCRIBE_BASE_URL"))
+            or _empty_to_none(source.get("TERMINAL_ANNOTATOR_LITELLM_BASE_URL"))
             or _empty_to_none(str(voice_config.get("base_url") or ""))
         ),
         api_key=(
-            _empty_to_none(source.get("TERMINAL_ANNOTATOR_LITELLM_API_KEY"))
+            _empty_to_none(source.get("TERMINAL_ANNOTATOR_TRANSCRIBE_API_KEY"))
+            or _empty_to_none(source.get("TERMINAL_ANNOTATOR_LITELLM_API_KEY"))
             or _empty_to_none(str(voice_config.get("api_key") or ""))
             or _key_from_named_env(source, api_key_env)
         ),

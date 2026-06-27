@@ -205,7 +205,7 @@ def ask_for_comment(
 
     def transcribe_recording(audio_path) -> None:
         try:
-            from terminal_annotator.adapters.transcription.litellm_provider import (
+            from terminal_annotator.adapters.transcription import (
                 transcribe_audio,
             )
             from terminal_annotator.core.transcription import (

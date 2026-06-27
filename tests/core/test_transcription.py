@@ -95,6 +95,35 @@ class TranscriptionConfigTests(unittest.TestCase):
         self.assertEqual(config.fallbacks, ["openai/whisper-1"])
         self.assertEqual(config.api_key, "env-key")
 
+    def test_reads_vercel_gateway_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            path = Path(tempdir) / "config.json"
+            path.write_text(
+                """{
+  "voice": {
+    "provider": "vercel-ai-gateway",
+    "model": "openai/whisper-1",
+    "base_url": "https://ai-gateway.vercel.sh/v4/ai/transcription-model",
+    "api_key_env": "AI_GATEWAY_API_KEY"
+  }
+}
+""",
+                encoding="utf-8",
+            )
+
+            config = transcription_config_from_env(
+                {"AI_GATEWAY_API_KEY": "vercel-key"},
+                path=path,
+            )
+
+        self.assertEqual(config.provider, "vercel-ai-gateway")
+        self.assertEqual(config.model, "openai/whisper-1")
+        self.assertEqual(
+            config.base_url,
+            "https://ai-gateway.vercel.sh/v4/ai/transcription-model",
+        )
+        self.assertEqual(config.api_key, "vercel-key")
+
 
 if __name__ == "__main__":
     unittest.main()

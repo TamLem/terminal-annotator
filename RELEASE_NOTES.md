@@ -3,10 +3,11 @@
 ## Unreleased
 
 - Added optional LiteLLM-backed voice transcription for annotation comments.
+- Added Vercel AI Gateway voice transcription support.
 - Added Record/Stop controls to the Terminator annotation dialog.
 - Added `terminal-ann transcribe <audio-path>` for debugging transcription setup.
 - Added `terminal-ann add --audio-path <path>` for voice metadata fixtures.
-- Added `./scripts/install-terminator-plugin.sh --with-voice --configure-voice` for first-class voice setup.
+- Added interactive voice setup to `./scripts/install-terminator-plugin.sh`.
 - Added `~/.config/terminal-annotator/config.json` support for voice settings.
 - Added cleanup for audio files referenced by old session files.
 

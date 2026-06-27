@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "transcribe":
-        from terminal_annotator.adapters.transcription.litellm_provider import (
+        from terminal_annotator.adapters.transcription import (
             transcribe_audio,
         )
 
