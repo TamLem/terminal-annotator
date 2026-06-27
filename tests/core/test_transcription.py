@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import unittest
+import tempfile
+from pathlib import Path
 
 from terminal_annotator.core.transcription import transcription_config_from_env
 
 
 class TranscriptionConfigTests(unittest.TestCase):
     def test_defaults_to_litellm_whisper(self) -> None:
-        config = transcription_config_from_env({})
+        config = transcription_config_from_env({}, path=Path("/tmp/missing-config.json"))
 
         self.assertEqual(config.provider, "litellm")
         self.assertEqual(config.model, "openai/whisper-1")
@@ -24,7 +26,8 @@ class TranscriptionConfigTests(unittest.TestCase):
                 ),
                 "TERMINAL_ANNOTATOR_LITELLM_BASE_URL": "http://127.0.0.1:4000",
                 "TERMINAL_ANNOTATOR_LITELLM_API_KEY": "proxy-key",
-            }
+            },
+            path=Path("/tmp/missing-config.json"),
         )
 
         self.assertEqual(config.provider, "litellm")
@@ -35,6 +38,62 @@ class TranscriptionConfigTests(unittest.TestCase):
         )
         self.assertEqual(config.base_url, "http://127.0.0.1:4000")
         self.assertEqual(config.api_key, "proxy-key")
+
+    def test_reads_file_config_without_shell_exports(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            path = Path(tempdir) / "config.json"
+            path.write_text(
+                """{
+  "voice": {
+    "provider": "litellm",
+    "model": "openai/gpt-4o-mini-transcribe",
+    "fallbacks": ["openai/whisper-1"],
+    "base_url": "http://127.0.0.1:4000",
+    "api_key_env": "TERMINAL_ANNOTATOR_TEST_KEY"
+  }
+}
+""",
+                encoding="utf-8",
+            )
+
+            config = transcription_config_from_env(
+                {"TERMINAL_ANNOTATOR_TEST_KEY": "config-key"},
+                path=path,
+            )
+
+        self.assertEqual(config.model, "openai/gpt-4o-mini-transcribe")
+        self.assertEqual(config.fallbacks, ["openai/whisper-1"])
+        self.assertEqual(config.base_url, "http://127.0.0.1:4000")
+        self.assertEqual(config.api_key, "config-key")
+        self.assertEqual(config.api_key_env, "TERMINAL_ANNOTATOR_TEST_KEY")
+
+    def test_environment_overrides_file_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            path = Path(tempdir) / "config.json"
+            path.write_text(
+                """{
+  "voice": {
+    "model": "openai/whisper-1",
+    "fallbacks": ["bad/model"],
+    "api_key": "file-key"
+  }
+}
+""",
+                encoding="utf-8",
+            )
+
+            config = transcription_config_from_env(
+                {
+                    "TERMINAL_ANNOTATOR_TRANSCRIBE_MODEL": "groq/whisper-large-v3",
+                    "TERMINAL_ANNOTATOR_TRANSCRIBE_FALLBACKS": "openai/whisper-1",
+                    "TERMINAL_ANNOTATOR_LITELLM_API_KEY": "env-key",
+                },
+                path=path,
+            )
+
+        self.assertEqual(config.model, "groq/whisper-large-v3")
+        self.assertEqual(config.fallbacks, ["openai/whisper-1"])
+        self.assertEqual(config.api_key, "env-key")
 
 
 if __name__ == "__main__":

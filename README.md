@@ -98,6 +98,12 @@ Install the Terminator plugin locally:
 ./scripts/install-terminator-plugin.sh
 ```
 
+Install with voice support:
+
+```bash
+./scripts/install-terminator-plugin.sh --with-voice --configure-voice
+```
+
 Then fully restart Terminator and enable the plugin under:
 
 ```text
@@ -122,26 +128,47 @@ Uninstall:
 
 Voice annotation is optional. It records audio from the annotation dialog, transcribes it through LiteLLM, then inserts the transcript into the normal comment editor so you can review and edit before saving.
 
-Install the optional dependency in a package/development environment:
+The recommended setup is through the install script:
 
 ```bash
-python3 -m pip install "terminal-annotator[voice]"
+./scripts/install-terminator-plugin.sh \
+  --with-voice \
+  --configure-voice \
+  --voice-model openai/whisper-1 \
+  --voice-fallbacks groq/whisper-large-v3,openai/whisper-1 \
+  --voice-api-key-env OPENAI_API_KEY
 ```
 
-Configure a LiteLLM-supported transcription model:
+This installs `litellm` with `pip --user`, copies the plugin files, and writes:
 
-```bash
-export TERMINAL_ANNOTATOR_TRANSCRIBE_PROVIDER=litellm
-export TERMINAL_ANNOTATOR_TRANSCRIBE_MODEL=openai/whisper-1
-export TERMINAL_ANNOTATOR_TRANSCRIBE_FALLBACKS=groq/whisper-large-v3,openai/whisper-1
-export OPENAI_API_KEY=...
+```text
+~/.config/terminal-annotator/config.json
 ```
 
-Optional LiteLLM proxy settings:
+Example config:
+
+```json
+{
+  "voice": {
+    "provider": "litellm",
+    "model": "openai/whisper-1",
+    "fallbacks": ["groq/whisper-large-v3", "openai/whisper-1"],
+    "api_key_env": "OPENAI_API_KEY"
+  }
+}
+```
+
+Keep provider secrets in the referenced environment variable, for example `OPENAI_API_KEY`, or use LiteLLM's normal provider-specific environment variables. Environment variables like `TERMINAL_ANNOTATOR_TRANSCRIBE_MODEL` still work as temporary overrides.
+
+Optional LiteLLM proxy setup:
 
 ```bash
-export TERMINAL_ANNOTATOR_LITELLM_BASE_URL=http://127.0.0.1:4000
-export TERMINAL_ANNOTATOR_LITELLM_API_KEY=...
+./scripts/install-terminator-plugin.sh \
+  --with-voice \
+  --configure-voice \
+  --voice-model whisper \
+  --voice-base-url http://127.0.0.1:4000 \
+  --voice-api-key-env TERMINAL_ANNOTATOR_LITELLM_API_KEY
 ```
 
 The dialog uses the first available recorder command in this order:
@@ -178,7 +205,7 @@ terminal-ann clear --session demo
 terminal-ann cleanup
 ```
 
-Voice transcription is optional and requires the `voice` extra plus provider credentials supported by LiteLLM. When using the Terminator plugin, LiteLLM must be importable from the Python environment Terminator uses.
+Voice transcription is optional and requires LiteLLM plus provider credentials supported by LiteLLM. The install script can install LiteLLM and write the voice config file. When using the Terminator plugin, LiteLLM must be importable from the Python environment Terminator uses.
 
 ## Storage
 
