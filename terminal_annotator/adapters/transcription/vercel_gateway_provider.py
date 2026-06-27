@@ -94,7 +94,10 @@ def _post_transcription(
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "ai-gateway-auth-method": "api-key",
+            "ai-gateway-protocol-version": "0.0.1",
             "ai-model-id": model,
+            "ai-transcription-model-specification-version": "4",
         },
         method="POST",
     )

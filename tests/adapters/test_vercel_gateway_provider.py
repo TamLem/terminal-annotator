@@ -61,6 +61,12 @@ class VercelGatewayProviderTests(unittest.TestCase):
         self.assertEqual(captured["timeout"], 60)
         self.assertEqual(request.headers["Authorization"], "Bearer vercel-key")
         self.assertEqual(request.headers["Ai-model-id"], "openai/whisper-1")
+        self.assertEqual(request.headers["Ai-gateway-auth-method"], "api-key")
+        self.assertEqual(request.headers["Ai-gateway-protocol-version"], "0.0.1")
+        self.assertEqual(
+            request.headers["Ai-transcription-model-specification-version"],
+            "4",
+        )
         self.assertEqual(body["audio"], "ZmFrZSB3YXY=")
         self.assertEqual(body["mediaType"], "audio/wav")
 
