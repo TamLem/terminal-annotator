@@ -1,15 +1,51 @@
 # Release Notes
 
-## Unreleased
+## 0.2.0 - Voice Input and Terminal Comments
 
-- Added optional LiteLLM-backed voice transcription for annotation comments.
-- Added Vercel AI Gateway voice transcription support.
-- Added Record/Stop controls to the Terminator annotation dialog.
-- Added `terminal-ann transcribe <audio-path>` for debugging transcription setup.
-- Added `terminal-ann add --audio-path <path>` for voice metadata fixtures.
-- Added interactive voice setup to `./scripts/install-terminator-plugin.sh`.
-- Added `~/.config/terminal-annotator/config.json` support for voice settings.
-- Added cleanup for audio files referenced by old session files.
+Released 2026-06-28.
+
+This release redesigns Terminal Annotator around terminal comments: selected terminal text is now optional context, and standalone typed or voice comments are saved into the same pending queue.
+
+### Added
+
+- Optional LiteLLM-backed voice transcription for terminal comments.
+- Vercel AI Gateway transcription support.
+- Interactive voice input setup in `./scripts/install-terminator-plugin.sh`.
+- File-based voice settings at `~/.config/terminal-annotator/config.json`.
+- Direct API-key storage with `0600` config permissions from the installer.
+- `terminal-ann transcribe <audio-path>` for debugging transcription setup.
+- `terminal-ann add --audio-path <path>` for voice metadata fixtures.
+- `terminal-ann add --comment "..."` support for standalone comments without selected text.
+- Cleanup for audio files referenced by old session files.
+- Diagnostic logging for voice setup, recording, transcription requests, and failures.
+
+### Changed
+
+- `Ctrl+Shift+A` now opens `New terminal comment` whether or not text is selected.
+- Selected terminal output is treated as optional context.
+- Pending insert formatting now aggregates contextual comments and standalone comments together.
+- Voice recording uses one Record/Stop button and a built-in activity spinner.
+- The custom live audio visualizer is deferred to avoid adding UI latency.
+- Recordings use speech-oriented mono 16 kHz WAV.
+- Vercel AI Gateway uploads are compressed to MP3 first when `ffmpeg` is available.
+- User-facing copy now uses terminal comments / voice input language.
+
+### Verification
+
+Automated checks passing for this release:
+
+```bash
+bash -n scripts/install-terminator-plugin.sh scripts/uninstall-terminator-plugin.sh
+python3 -m unittest discover -v
+python3 -m compileall terminal_annotator
+```
+
+Current result:
+
+```text
+Ran 41 tests
+OK
+```
 
 ## 0.1.0 - Initial Public Release
 
