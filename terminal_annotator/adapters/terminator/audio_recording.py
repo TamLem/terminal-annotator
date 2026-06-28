@@ -1,4 +1,4 @@
-"""Audio recording helpers for the Terminator annotation dialog."""
+"""Audio recording helpers for the Terminator comment dialog."""
 
 from __future__ import annotations
 

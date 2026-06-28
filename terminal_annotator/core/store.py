@@ -102,12 +102,13 @@ def save_annotation(
     comment: str,
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if not selected_text:
-        raise ValueError("selected_text must not be empty")
     if not comment or not comment.strip():
         raise ValueError("comment must not be empty")
 
     metadata = json_safe_dict(metadata)
+    selected_text = selected_text.strip()
+    metadata.setdefault("comment_kind", "terminal-comment")
+    metadata.setdefault("has_context", bool(selected_text))
     session = get_or_create_session(session_id, metadata)
     annotation = Annotation(
         selected_text=selected_text,
@@ -122,6 +123,7 @@ def save_annotation(
         annotation_id=annotation.id,
         selected_text_length=len(selected_text),
         comment_length=len(comment.strip()),
+        has_context=bool(selected_text),
         has_voice=bool(annotation.metadata.get("voice")),
     )
     return annotation.to_dict()

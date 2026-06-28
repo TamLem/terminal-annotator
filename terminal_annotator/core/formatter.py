@@ -1,4 +1,4 @@
-"""Format pending annotations into terminal input text."""
+"""Format pending terminal comments into terminal input text."""
 
 from __future__ import annotations
 
@@ -33,17 +33,20 @@ def format_annotations(
         for index, annotation in enumerate(annotations, start=1):
             selected = _preview(str(annotation.get("selected_text", "")), 300)
             comment = str(annotation.get("comment", "")).strip()
-            lines.append(f"{index}. {selected} -> {comment}")
+            if selected:
+                lines.append(f"{index}. {selected} -> {comment}")
+            else:
+                lines.append(f"{index}. {comment}")
         return "\n".join(lines)
 
     if mode == "plain-notes":
-        header = "Review notes from selected terminal output:"
-        selected_label = "Selected text:"
+        header = "Review terminal comments:"
+        selected_label = "Context:"
         comment_label = "Comment:"
         footer = ""
     else:
-        header = "Apply these comments from my annotations on your previous output:"
-        selected_label = "Selected text:"
+        header = "Apply these terminal comments:"
+        selected_label = "Context:"
         comment_label = "My comment:"
         footer = "Address these comments before continuing."
 
@@ -51,16 +54,25 @@ def format_annotations(
     for index, annotation in enumerate(annotations, start=1):
         selected = _preview(str(annotation.get("selected_text", "")))
         comment = str(annotation.get("comment", "")).strip()
-        lines.extend(
-            [
-                f"{index}. {selected_label}",
-                f'"{selected}"',
-                "",
-                comment_label,
-                comment,
-                "",
-            ]
-        )
+        if selected:
+            lines.extend(
+                [
+                    f"{index}. {selected_label}",
+                    f'"{selected}"',
+                    "",
+                    comment_label,
+                    comment,
+                    "",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f"{index}. Terminal comment:",
+                    comment,
+                    "",
+                ]
+            )
 
     if footer:
         lines.append(footer)

@@ -22,10 +22,19 @@ class FormatterTests(unittest.TestCase):
 
         text = format_pending_annotations("session-1")
 
-        self.assertIn("Apply these comments", text)
+        self.assertIn("Apply these terminal comments", text)
         self.assertIn('"Create a new TeamMember relation"', text)
         self.assertIn("My comment:", text)
         self.assertIn("Address these comments before continuing.", text)
+
+    def test_ai_review_format_includes_standalone_comments(self) -> None:
+        save_annotation("session-1", "", "Transcribe the migration steps.")
+
+        text = format_pending_annotations("session-1")
+
+        self.assertIn("Terminal comment:", text)
+        self.assertIn("Transcribe the migration steps.", text)
+        self.assertNotIn('""', text)
 
     def test_plain_notes_format(self) -> None:
         text = format_annotations(
@@ -33,7 +42,7 @@ class FormatterTests(unittest.TestCase):
             mode="plain-notes",
         )
 
-        self.assertIn("Review notes from selected terminal output:", text)
+        self.assertIn("Review terminal comments:", text)
         self.assertIn("Comment:", text)
         self.assertNotIn("previous output", text)
 
@@ -45,6 +54,14 @@ class FormatterTests(unittest.TestCase):
 
         self.assertIn("Review notes:", text)
         self.assertIn("[truncated]", text)
+
+    def test_compact_format_handles_standalone_comments(self) -> None:
+        text = format_annotations(
+            [{"selected_text": "", "comment": "voice-only note"}],
+            mode="compact",
+        )
+
+        self.assertEqual(text, "Review notes:\n1. voice-only note")
 
 
 if __name__ == "__main__":

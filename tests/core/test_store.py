@@ -51,6 +51,19 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(data["terminal"], "terminator")
         self.assertEqual(data["cwd"], "/tmp/project")
         self.assertEqual(data["annotations"][0]["selected_text"], "selected text")
+        self.assertEqual(
+            data["annotations"][0]["metadata"]["comment_kind"],
+            "terminal-comment",
+        )
+        self.assertTrue(data["annotations"][0]["metadata"]["has_context"])
+
+    def test_save_comment_without_selected_text(self) -> None:
+        annotation = save_annotation("session-1", "", "standalone voice note")
+
+        self.assertEqual(annotation["selected_text"], "")
+        self.assertEqual(annotation["comment"], "standalone voice note")
+        self.assertEqual(annotation["metadata"]["comment_kind"], "terminal-comment")
+        self.assertFalse(annotation["metadata"]["has_context"])
 
     def test_status_transitions_preserve_records(self) -> None:
         first = save_annotation("session-1", "one", "comment one")

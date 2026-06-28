@@ -1,6 +1,6 @@
 # Voice Annotation Plan
 
-This plan adds optional cloud-backed voice annotation to Terminal Annotator. Voice is a faster input method for the existing annotation comment; saved annotations remain normal text annotations after transcription.
+This plan adds optional cloud-backed voice input to Terminal Annotator. Voice is a faster input method for a terminal comment; selected terminal text is optional context, and standalone comments are valid when no text is selected.
 
 ## Decision
 
@@ -27,25 +27,25 @@ Adopt its small-wrapper pattern: lazy LiteLLM import, a typed transcription resu
 
 ## User Workflow
 
-1. User selects terminal output.
-2. User opens `Annotate selected text`.
-3. Dialog shows the selected-text preview and the existing comment editor.
+1. User opens `New terminal comment`.
+2. If terminal text is selected, the dialog shows it as context.
+3. Dialog focuses the comment editor.
 4. User clicks `Record`.
 5. Dialog records microphone audio without blocking GTK.
 6. User clicks `Stop`.
 7. Dialog sends the audio file to LiteLLM transcription in a background worker.
 8. Transcript is inserted into the existing comment text box.
 9. User edits the transcript if needed.
-10. User saves the annotation.
+10. User saves the comment.
 
 The transcript must be editable before save. The dialog should never save raw transcript text without giving the user a chance to review it.
 
 ## Non-Goals
 
-- No audio-only annotations.
+- No separate audio-only queue; voice transcripts save as normal terminal comments.
 - No automatic terminal insertion after transcription.
 - No auto-submit to the terminal.
-- No required cloud dependency for existing text annotation users.
+- No required cloud dependency for existing typed-comment users.
 - No provider-specific code in `terminal_annotator.core`.
 
 ## Package Layout

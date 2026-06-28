@@ -1,40 +1,40 @@
 # Terminal Annotator
 
-Terminal Annotator is a Linux terminal-side annotation tool for reviewing terminal output and inserting saved comments back into the active terminal input.
+Terminal Annotator is a Linux terminal-side commenting tool for collecting terminal notes and inserting saved comments back into the active terminal input.
 
-It is designed for AI terminal workflows, but it does not depend on any specific AI CLI. You select terminal output, save comments in a small GTK dialog, then insert those pending comments into the prompt when you are ready to continue.
+It is designed for AI terminal workflows, but it does not depend on any specific AI CLI. You can select terminal output as optional context, save typed or voice comments in a small GTK dialog, then insert those pending comments into the prompt when you are ready to continue.
 
-The first adapter targets Terminator on Linux. The core package is terminal-agnostic and stores annotation data outside the project directory in XDG runtime/cache storage.
+The first adapter targets Terminator on Linux. The core package is terminal-agnostic and stores comment data outside the project directory in XDG runtime/cache storage.
 
 See [RELEASE_NOTES.md](RELEASE_NOTES.md) for the initial public release summary.
 
 ## Usage
 
-Annotate output:
+Create a terminal comment:
 
-1. Select text in a Terminator pane.
-2. Right-click and choose `Annotate selected text`, or press `Ctrl+Shift+A`.
+1. Optionally select text in a Terminator pane.
+2. Right-click and choose `New terminal comment`, or press `Ctrl+Shift+A`.
 3. Add your comment.
 4. Save.
 
-Insert pending annotations:
+Insert pending comments:
 
 1. Focus the pane where you want the comments inserted.
-2. Right-click and choose `Insert pending annotations`, or press `Ctrl+Shift+Y`.
+2. Right-click and choose `Insert pending comments`, or press `Ctrl+Shift+Y`.
 3. Review or edit the inserted text.
 4. Press Enter yourself when ready.
 
 The plugin never auto-submits text.
 
-Clear current session annotations:
+Clear current session comments:
 
-- Right-click and choose `Clear session annotations`.
-- This clears annotations for the active pane/session.
+- Right-click and choose `Clear session comments`.
+- This clears comments for the active pane/session.
 
-Clear previous uninserted annotations while adding a new one:
+Clear previous uninserted comments while adding a new one:
 
-- If the current session already has pending annotations, the annotation dialog shows a checkbox to clear those pending annotations before saving the new comment.
-- Inserted annotations are left intact.
+- If the current session already has pending comments, the comment dialog shows a checkbox to clear those pending comments before saving the new comment.
+- Inserted comments are left intact.
 
 ## Opencode Selection Note
 
@@ -52,7 +52,7 @@ Tested:
 - Terminator on Linux.
 - OpenAI Codex CLI.
 - Opencode, with a selection workaround: hold `Shift` before selecting text so the terminal receives the mouse selection instead of Opencode capturing it.
-- Split Terminator panes, including pane-local pending annotations.
+- Split Terminator panes, including pane-local pending comments.
 
 Not yet tested:
 
@@ -66,21 +66,22 @@ The tool should work best with CLI apps that allow normal terminal text selectio
 
 ## Features
 
-- Annotate selected terminal output from a Terminator right-click menu.
-- Save annotations per active terminal pane/session.
-- Insert pending annotations into terminal input without submitting them.
-- Preserve inserted annotations as history by marking them `inserted`.
-- Clear pending annotations for the current session.
-- Optional checkbox in the annotation dialog to clear previous uninserted annotations before saving a new one.
+- Create terminal comments from a Terminator right-click menu.
+- Save terminal comments per active terminal pane/session.
+- Attach selected terminal output as optional context when text is selected.
+- Insert pending comments into terminal input without submitting them.
+- Preserve inserted comments as history by marking them `inserted`.
+- Clear pending comments for the current session.
+- Optional checkbox in the comment dialog to clear previous uninserted comments before saving a new one.
 - Keyboard shortcuts:
-  - `Ctrl+Shift+A`: annotate selected text.
-  - `Ctrl+Shift+Y`: insert pending annotations.
+  - `Ctrl+Shift+A`: create a terminal comment, with selected text used as optional context.
+  - `Ctrl+Shift+Y`: insert pending comments.
 - Optional voice annotation:
-  - Record from the annotation dialog.
+  - Record from the comment dialog.
   - Transcribe through LiteLLM.
   - Insert the transcript into the existing comment box before saving.
-- Theme-aware annotation dialog that follows the active terminal profile where possible.
-- Debug CLI for listing, formatting, adding, clearing, and cleaning up stored annotations.
+- Theme-aware comment dialog that follows the active terminal profile where possible.
+- Debug CLI for listing, formatting, adding, clearing, and cleaning up stored comments.
 
 ## Install
 
@@ -128,7 +129,7 @@ Uninstall:
 
 ## Voice Annotation
 
-Voice annotation is optional. It records audio from the annotation dialog, transcribes it through LiteLLM, then inserts the transcript into the normal comment editor so you can review and edit before saving.
+Voice annotation is optional. It records audio from the comment dialog, transcribes it through LiteLLM, then inserts the transcript into the normal comment editor so you can review and edit before saving. The comment can be saved with selected terminal context or as a standalone terminal comment when no text is selected.
 
 The recommended setup is through the interactive install script:
 
@@ -183,9 +184,9 @@ The dialog uses the first available recorder command in this order:
 
 Recordings are captured as speech-oriented WAV: mono, 16 kHz, 16-bit PCM. This keeps raw recordings much smaller than default stereo 44.1 kHz WAV while staying compatible with transcription providers. For Vercel AI Gateway, the app compresses the upload to MP3 first when `ffmpeg` is available.
 
-The annotation dialog uses one voice button: click once to record, click again to stop. A small live bar view shows the incoming audio level while recording.
+The comment dialog uses one voice button: click once to record, click again to stop. A built-in activity spinner shows recording/transcription activity; live audio visualization is deferred.
 
-Recorded audio is stored under the existing runtime/cache storage root in `audio/`. It is attached as annotation metadata; inserted annotations still use the transcribed text from `comment`.
+Recorded audio is stored under the existing runtime/cache storage root in `audio/`. It is attached as comment metadata; inserted comments still use the transcribed text from `comment`.
 
 ## Development CLI
 
@@ -263,7 +264,7 @@ terminal_annotator/
     terminator/
       right-click menu plugin
       selected-text extraction
-      GTK annotation dialog
+      GTK comment dialog
       terminal input insertion
       optional voice recording
     transcription/
@@ -286,9 +287,9 @@ python3 -m terminal_annotator.cli.main --help
 
 Suggested manual checks in Terminator:
 
-1. Annotate normal shell output and insert pending annotations.
+1. Create a comment with selected shell output and insert pending comments.
 2. Confirm inserted text appears at the prompt without being submitted.
-3. Repeat in split panes and confirm pending annotations stay pane-local.
+3. Repeat in split panes and confirm pending comments stay pane-local.
 4. Test inside OpenAI Codex CLI.
 5. Test inside Opencode using `Shift` before text selection.
 6. Optional voice: record a short note, confirm the transcript appears in the comment box before saving, then insert it.

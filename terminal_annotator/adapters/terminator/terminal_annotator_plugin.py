@@ -77,18 +77,18 @@ if plugin is not None:
             self._ensure_shortcuts(terminal)
 
             annotate_item = Gtk.MenuItem(
-                label=f"Annotate selected text    {ANNOTATE_SHORTCUT_LABEL}"
+                label=f"New terminal comment    {ANNOTATE_SHORTCUT_LABEL}"
             )
             annotate_item.connect("activate", self._annotate_selected_text, terminal)
             menuitems.append(annotate_item)
 
             insert_item = Gtk.MenuItem(
-                label=f"Insert pending annotations    {INSERT_SHORTCUT_LABEL}"
+                label=f"Insert pending comments    {INSERT_SHORTCUT_LABEL}"
             )
             insert_item.connect("activate", self._insert_pending_annotations, terminal)
             menuitems.append(insert_item)
 
-            clear_item = Gtk.MenuItem(label="Clear session annotations")
+            clear_item = Gtk.MenuItem(label="Clear session comments")
             clear_item.connect("activate", self._clear_session_annotations, terminal)
             menuitems.append(clear_item)
 
@@ -146,9 +146,6 @@ if plugin is not None:
             parent = _window_for_terminal(terminal)
             try:
                 selected_text = get_selected_text(terminal).strip()
-                if not selected_text:
-                    show_error("No terminal text is selected.", parent=parent)
-                    return
 
                 session_id, metadata = self._session(terminal)
                 pending_count = len(get_pending_annotations(session_id))
@@ -165,9 +162,12 @@ if plugin is not None:
                     clear_pending_annotations(session_id)
                 save_metadata = dict(metadata)
                 save_metadata.update(result.metadata)
+                save_metadata["comment_kind"] = "terminal-comment"
+                save_metadata["has_context"] = bool(selected_text)
+                save_metadata["input_method"] = "voice" if result.metadata.get("voice") else "typed"
                 save_annotation(session_id, selected_text, result.comment, save_metadata)
             except Exception as exc:
-                show_error(f"Could not save annotation: {exc}", parent=parent)
+                show_error(f"Could not save comment: {exc}", parent=parent)
 
         def _insert_pending_annotations(self, _menuitem, terminal):
             parent = _window_for_terminal(terminal)
@@ -175,14 +175,14 @@ if plugin is not None:
                 session_id, _metadata = self._session(terminal)
                 annotations = get_pending_annotations(session_id)
                 if not annotations:
-                    show_error("No pending annotations for this terminal session.", parent=parent)
+                    show_error("No pending comments for this terminal session.", parent=parent)
                     return
 
                 text = format_annotations(annotations, mode="ai-review")
                 insert_text(terminal, text)
                 mark_inserted(session_id, [item["id"] for item in annotations])
             except Exception as exc:
-                show_error(f"Could not insert annotations: {exc}", parent=parent)
+                show_error(f"Could not insert comments: {exc}", parent=parent)
 
         def _clear_session_annotations(self, _menuitem, terminal):
             parent = _window_for_terminal(terminal)
@@ -190,7 +190,7 @@ if plugin is not None:
                 session_id, _metadata = self._session(terminal)
                 clear_session(session_id)
             except Exception as exc:
-                show_error(f"Could not clear annotations: {exc}", parent=parent)
+                show_error(f"Could not clear comments: {exc}", parent=parent)
 
 else:
 

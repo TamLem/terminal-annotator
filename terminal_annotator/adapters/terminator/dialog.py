@@ -36,7 +36,7 @@ def ask_for_comment(
     Gtk, Gdk, GLib, Pango = _load_gtk()
 
     dialog = Gtk.Dialog(
-        title="Annotate terminal output",
+        title="New terminal comment",
         transient_for=parent,
         modal=True,
     )
@@ -61,41 +61,43 @@ def ask_for_comment(
     header.set_hexpand(True)
     title = Gtk.Label()
     title.set_xalign(0)
-    title.set_markup("<b>Add annotation</b>")
+    title.set_markup("<b>New terminal comment</b>")
     title.get_style_context().add_class("terminal-annotator-title")
     header.pack_start(title, True, True, 0)
     outer.pack_start(header, False, False, 0)
 
-    selected_section = _section_box(Gtk, "Selected terminal output")
-    selected_body = _section_body(Gtk)
-    selected_section.pack_start(selected_body, True, True, 0)
-    outer.pack_start(selected_section, True, True, 0)
+    has_context = bool(selected_text.strip())
+    if has_context:
+        selected_section = _section_box(Gtk, "Context")
+        selected_body = _section_body(Gtk)
+        selected_section.pack_start(selected_body, True, True, 0)
+        outer.pack_start(selected_section, True, True, 0)
 
-    preview = Gtk.TextView()
-    preview.set_editable(False)
-    preview.set_cursor_visible(False)
-    preview.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-    preview.set_left_margin(8)
-    preview.set_right_margin(8)
-    preview.set_top_margin(8)
-    preview.set_bottom_margin(8)
-    _set_monospace(preview, Pango)
-    _set_terminal_font(preview, Pango, terminal_theme)
-    preview.get_style_context().add_class("terminal-annotator-preview")
-    preview.get_buffer().set_text(selected_text)
-    preview_scroll = Gtk.ScrolledWindow()
-    preview_scroll.get_style_context().add_class("terminal-annotator-scroll")
-    preview_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-    preview_scroll.set_shadow_type(Gtk.ShadowType.NONE)
-    preview_scroll.set_min_content_height(145)
-    preview_scroll.add(preview)
-    selected_body.pack_start(preview_scroll, True, True, 0)
+        preview = Gtk.TextView()
+        preview.set_editable(False)
+        preview.set_cursor_visible(False)
+        preview.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        preview.set_left_margin(8)
+        preview.set_right_margin(8)
+        preview.set_top_margin(8)
+        preview.set_bottom_margin(8)
+        _set_monospace(preview, Pango)
+        _set_terminal_font(preview, Pango, terminal_theme)
+        preview.get_style_context().add_class("terminal-annotator-preview")
+        preview.get_buffer().set_text(selected_text)
+        preview_scroll = Gtk.ScrolledWindow()
+        preview_scroll.get_style_context().add_class("terminal-annotator-scroll")
+        preview_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        preview_scroll.set_shadow_type(Gtk.ShadowType.NONE)
+        preview_scroll.set_min_content_height(125)
+        preview_scroll.add(preview)
+        selected_body.pack_start(preview_scroll, True, True, 0)
 
-    meta_text = _selection_meta_text(selected_text)
-    meta_label = Gtk.Label(label=meta_text)
-    meta_label.set_xalign(0)
-    meta_label.get_style_context().add_class("dim-label")
-    selected_section.pack_start(meta_label, False, False, 0)
+        meta_text = _selection_meta_text(selected_text)
+        meta_label = Gtk.Label(label=meta_text)
+        meta_label.set_xalign(0)
+        meta_label.get_style_context().add_class("dim-label")
+        selected_section.pack_start(meta_label, False, False, 0)
 
     comment_section = _section_box(Gtk, "Comment")
     comment_body = _section_body(Gtk)
@@ -114,7 +116,7 @@ def ask_for_comment(
     comment_scroll.get_style_context().add_class("terminal-annotator-scroll")
     comment_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
     comment_scroll.set_shadow_type(Gtk.ShadowType.NONE)
-    comment_scroll.set_min_content_height(150)
+    comment_scroll.set_min_content_height(190 if not has_context else 150)
     comment_scroll.add(comment_view)
     comment_body.pack_start(comment_scroll, True, True, 0)
 
@@ -125,7 +127,7 @@ def ask_for_comment(
     voice_title = Gtk.Label(label="Voice note")
     voice_title.set_xalign(0)
     voice_title.get_style_context().add_class("terminal-annotator-section-title")
-    voice_hint = Gtk.Label(label="Press R to record or stop. Ctrl+Enter saves.")
+    voice_hint = Gtk.Label(label="Press R to record or stop. Transcript appears above.")
     voice_hint.set_xalign(0)
     voice_hint.get_style_context().add_class("dim-label")
     voice_text.pack_start(voice_title, False, False, 0)
@@ -149,7 +151,7 @@ def ask_for_comment(
     clear_pending_check = None
     if pending_count > 0:
         clear_pending_check = Gtk.CheckButton(
-            label=f"Clear {pending_count} pending annotation"
+            label=f"Clear {pending_count} pending comment"
             f"{'' if pending_count == 1 else 's'} before saving"
         )
         clear_pending_check.get_style_context().add_class("terminal-annotator-check")
