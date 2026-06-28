@@ -1,303 +1,177 @@
 # Terminal Annotator
 
-Terminal Annotator is a Linux terminal-side commenting tool for collecting terminal notes and inserting saved comments back into the active terminal input.
+Add voice and text comments to Codex CLI, Opencode, and other terminal agents.
 
-It is designed for AI terminal workflows, but it does not depend on any specific AI CLI. You can select terminal output as optional context, save typed or voice comments in a small GTK dialog, then insert those pending comments into the prompt when you are ready to continue.
+Terminal Annotator is a local voice-and-text commenting tool for terminal workflows. Record a quick spoken note, transcribe it into a terminal comment, and later insert the collected comments back into the active terminal input when you are ready to act on them.
 
-The first adapter targets Terminator on Linux. The core package is terminal-agnostic and stores comment data outside the project directory in XDG runtime/cache storage.
+It is built for review-heavy AI terminal workflows: Codex CLI, Claude Code, Aider, Opencode, shells, REPLs, database consoles, and other interactive CLIs where you need to capture corrections while staying in flow. The main workflow is voice-first, but typed comments and selected terminal context are supported too.
 
-See [RELEASE_NOTES.md](RELEASE_NOTES.md) for the initial public release summary.
-
-## Usage
-
-Create a terminal comment:
-
-1. Optionally select text in a Terminator pane.
-2. Right-click and choose `New terminal comment`, or press `Ctrl+Shift+A`.
-3. Add your comment.
-4. Save.
-
-Insert pending comments:
-
-1. Focus the pane where you want the comments inserted.
-2. Right-click and choose `Insert pending comments`, or press `Ctrl+Shift+Y`.
-3. Review or edit the inserted text.
-4. Press Enter yourself when ready.
-
-The plugin never auto-submits text.
-
-Clear current session comments:
-
-- Right-click and choose `Clear session comments`.
-- This clears comments for the active pane/session.
-
-Clear previous uninserted comments while adding a new one:
-
-- If the current session already has pending comments, the comment dialog shows a checkbox to clear those pending comments before saving the new comment.
-- Inserted comments are left intact.
-
-## Opencode Selection Note
-
-Opencode can capture mouse input before the terminal selection happens. In Terminator, hold `Shift` before selecting text to force normal terminal selection, then annotate as usual.
-
-This is an Opencode interaction detail, not a Terminal Annotator integration.
-
+This project fills a small but painful gap: terminal output is easy to inspect but awkward to annotate without breaking focus. Terminal Annotator keeps comments tied to a terminal pane/session, stores them outside the project directory, and inserts a review-ready prompt only when you choose. It does not auto-submit anything.
 
 ## Status
 
-This is early local tooling, but the core workflow is usable.
+Terminal Annotator is an early release.
 
-Tested:
+- Current version: `0.2.0`
+- Current platform target: Linux
+- Current terminal adapter: Terminator
+- Install model: local checkout only
+- Published packages: none yet
+- Core dependency footprint: none
+- Voice transcription: LiteLLM or Vercel AI Gateway
+- Optional voice dependency for LiteLLM mode: `litellm`
+- Optional Terminator runtime dependency: `PyGObject`
 
-- Terminator on Linux.
-- OpenAI Codex CLI.
-- Opencode, with a selection workaround: hold `Shift` before selecting text so the terminal receives the mouse selection instead of Opencode capturing it.
-- Split Terminator panes, including pane-local pending comments.
+Expect rough edges across Linux distributions, Terminator versions, desktop environments, and terminal-based AI tools. The core is intentionally terminal-agnostic so more adapters can be added without coupling the project to one terminal emulator or one AI CLI.
 
-Not yet tested:
+## What It Does
 
-- Voice input end-to-end in Terminator.
-- Claude Code.
-- Aider.
-- Other interactive CLI apps.
-- Other terminal emulators.
+- Records voice comments and transcribes them into editable terminal notes.
+- Saves typed comments when voice is not the right fit.
+- Attaches selected terminal text as optional context.
+- Keeps pending comments scoped to the active terminal session.
+- Inserts pending comments into the active terminal input for review.
+- Stores session data outside the repository.
+- Provides a small `terminal-ann` CLI for debugging sessions and transcription.
 
-The tool should work best with CLI apps that allow normal terminal text selection and accept pasted/input text at the prompt. There are no Codex-, Opencode-, Claude-, or Aider-specific hooks.
+The default inserted format is designed for AI terminal workflows:
 
-## Features
+```text
+Apply these terminal comments:
 
-- Create terminal comments from a Terminator right-click menu.
-- Save terminal comments per active terminal pane/session.
-- Attach selected terminal output as optional context when text is selected.
-- Insert pending comments into terminal input without submitting them.
-- Preserve inserted comments as history by marking them `inserted`.
-- Clear pending comments for the current session.
-- Optional checkbox in the comment dialog to clear previous uninserted comments before saving a new one.
-- Keyboard shortcuts:
-  - `Ctrl+Shift+A`: create a terminal comment, with selected text used as optional context.
-  - `Ctrl+Shift+Y`: insert pending comments.
-- Optional voice input:
-  - Record from the comment dialog.
-  - Transcribe through LiteLLM.
-  - Insert the transcript into the existing comment box before saving.
-- Theme-aware comment dialog that follows the active terminal profile where possible.
-- Debug CLI for listing, formatting, adding, clearing, and cleaning up stored comments.
+1. Terminal comment:
+Use the existing TeamMember model instead.
 
-## Install
+Address these comments before continuing.
+```
 
-Requirements:
+You can edit the inserted text before pressing Enter. Terminal Annotator never presses Enter for you.
 
-- Linux.
-- Terminator.
-- Python 3.10+.
-- GTK/PyGObject available to Terminator.
-- Optional for voice: LiteLLM provider credentials and one recorder command: `parecord`, `arecord`, or `ffmpeg`.
+## Voice-First Workflow
 
-Install the Terminator plugin locally:
+In Terminator:
+
+1. Press `Ctrl+Shift+A` or choose `New terminal comment`.
+2. Record a voice note or type a comment.
+3. Review the transcribed text before saving.
+4. Press `Ctrl+Shift+Y` or choose `Insert pending comments`.
+5. Edit the inserted prompt if needed, then press Enter yourself.
+
+Selected terminal text is optional. If text is selected, it is saved as context for the comment. If nothing is selected, the comment is saved as a standalone terminal note.
+
+## Terminator Shortcuts
+
+In Terminator:
+
+- `Ctrl+Shift+A`: create a new terminal comment
+- `Ctrl+Shift+Y`: insert pending comments
+
+The same actions are available from the right-click menu:
+
+- `New terminal comment`
+- `Insert pending comments`
+- `Clear session comments`
+
+## Install Locally
+
+Clone the repository, then run the installer from the repo root:
 
 ```bash
 ./scripts/install-terminator-plugin.sh
 ```
 
-The installer is interactive. It asks whether to configure optional voice input, then guides you through LiteLLM or Vercel AI Gateway setup when enabled.
-
-Then fully restart Terminator and enable the plugin under:
+Restart Terminator, then enable the plugin:
 
 ```text
 Preferences -> Plugins -> TerminalAnnotator
 ```
 
-The install script copies the plugin and package into:
-
-```text
-~/.config/terminator/plugins/
-```
-
-Run the install script again after making local code changes.
-
-Uninstall:
+To uninstall:
 
 ```bash
 ./scripts/uninstall-terminator-plugin.sh
 ```
 
-## Voice Input
+There are no published PyPI, distro, Homebrew, Flatpak, Snap, or npm packages yet. For now, install from a local checkout.
 
-Voice input is optional. It records audio from the comment dialog, transcribes it through LiteLLM, then inserts the transcript into the normal comment editor so you can review and edit before saving. The comment can be saved with selected terminal context or as a standalone terminal comment when no text is selected.
+## Voice Setup
 
-The recommended setup is through the interactive install script:
+The installer can configure voice transcription interactively.
 
-```bash
-./scripts/install-terminator-plugin.sh
-```
+Supported transcription paths:
 
-It copies the plugin files, asks whether to configure voice input, and writes:
+- LiteLLM direct or proxy mode
+- Vercel AI Gateway
+
+Voice settings are written to:
 
 ```text
 ~/.config/terminal-annotator/config.json
 ```
 
-Example config:
+The config file is written with `0600` permissions when created by the installer.
 
-```json
-{
-  "voice": {
-    "provider": "litellm",
-    "model": "openai/whisper-1",
-    "fallbacks": ["groq/whisper-large-v3", "openai/whisper-1"],
-    "api_key_env": "OPENAI_API_KEY"
-  }
-}
-```
+## Debug CLI
 
-Keep provider secrets in the referenced environment variable, for example `OPENAI_API_KEY`, or use LiteLLM's normal provider-specific environment variables. Environment variables like `TERMINAL_ANNOTATOR_TRANSCRIBE_MODEL` still work as temporary overrides.
-The installer stores the entered API key directly in `config.json` and sets file permissions to `0600`. Advanced users can manually use `api_key_env` instead.
-
-Example Vercel config:
-
-```json
-{
-  "voice": {
-    "provider": "vercel-ai-gateway",
-    "model": "openai/whisper-1",
-    "base_url": "https://ai-gateway.vercel.sh/v4/ai/transcription-model",
-    "api_key": "..."
-  }
-}
-```
-
-Optional LiteLLM proxy setup:
-
-Choose LiteLLM in the installer, enter your proxy alias as the model, and enter the proxy URL when prompted.
-
-The dialog uses the first available recorder command in this order:
-
-1. `parecord`
-2. `arecord`
-3. `ffmpeg`
-
-Recordings are captured as speech-oriented WAV: mono, 16 kHz, 16-bit PCM. This keeps raw recordings much smaller than default stereo 44.1 kHz WAV while staying compatible with transcription providers. For Vercel AI Gateway, the app compresses the upload to MP3 first when `ffmpeg` is available.
-
-The comment dialog uses one voice button: click once to record, click again to stop. A built-in activity spinner shows recording/transcription activity; live audio visualization is deferred.
-
-Recorded audio is stored under the existing runtime/cache storage root in `audio/`. It is attached as comment metadata; inserted comments still use the transcribed text from `comment`.
-
-## Development CLI
-
-The CLI is primarily for debugging storage and formatting.
+The CLI is mainly for development and debugging:
 
 ```bash
-python3 -m terminal_annotator.cli.main --help
-python3 -m terminal_annotator.cli.main --storage-root
-python3 -m terminal_annotator.cli.main list
-python3 -m terminal_annotator.cli.main add --session demo --text "selected output" --comment "my note"
-python3 -m terminal_annotator.cli.main add --session demo --comment "standalone note"
-python3 -m terminal_annotator.cli.main add --session demo --text "selected output" --comment "voice note" --audio-path ./note.wav
-python3 -m terminal_annotator.cli.main transcribe ./note.wav
-python3 -m terminal_annotator.cli.main format --session demo
-python3 -m terminal_annotator.cli.main clear --session demo
-python3 -m terminal_annotator.cli.main cleanup
-```
-
-If installed as a package, the `terminal-ann` entry point exposes the same commands:
-
-```bash
+terminal-ann --storage-root
 terminal-ann list
-terminal-ann transcribe ./note.wav
 terminal-ann format --session demo
 terminal-ann clear --session demo
-terminal-ann cleanup
+terminal-ann cleanup --max-age-days 7
+terminal-ann transcribe path/to/audio.wav
 ```
-
-Voice transcription is optional. LiteLLM mode requires LiteLLM plus provider credentials supported by LiteLLM. Vercel AI Gateway mode requires an AI Gateway key. The install script can write the voice config file and can install LiteLLM when needed. When using LiteLLM mode in the Terminator plugin, LiteLLM must be importable from the Python environment Terminator uses.
 
 ## Storage
 
-Session files are stored outside the repository using this order:
+Terminal Annotator writes session data outside the project directory.
+
+Storage resolution order:
 
 1. `$XDG_RUNTIME_DIR/terminal-annotator/`
 2. `$XDG_CACHE_HOME/terminal-annotator/`
 3. `~/.cache/terminal-annotator/`
 4. `/tmp/terminal-annotator-$USER/`
 
-Session files live under:
+This keeps comments local to the machine and avoids adding annotation files to the repository you are working on.
 
-```text
-sessions/<session_id>.json
-```
-
-Annotation statuses:
-
-- `pending`: available for insertion.
-- `inserted`: already inserted into terminal input.
-- `cleared`: ignored by future insertions.
-
-No annotation files are written to the project directory.
-
-## Logs
-
-Diagnostic logs are written outside the repository under:
-
-```text
-<storage-root>/logs/terminal-annotator.log
-```
-
-The log file is rotated locally and redacts API keys, authorization headers, tokens, secrets, and passwords. It records voice setup/runtime events such as config loading, recorder start/stop, transcription provider requests, success/failure, and annotation saves.
-
-## Architecture
-
-```text
-terminal_annotator/
-  core/
-    annotation model
-    session identity
-    runtime/cache storage
-    formatter
-    cleanup
-    transcription config
-  adapters/
-    terminator/
-      right-click menu plugin
-      selected-text extraction
-      GTK comment dialog
-      terminal input insertion
-      optional voice recording
-    transcription/
-      LiteLLM provider
-  cli/
-    debug commands
-```
-
-The core package does not import GTK, VTE, Terminator, or AI-tool APIs. Terminal-specific behavior is isolated in the adapter.
-
-## Local Verification
-
-Run automated checks:
+## Development
 
 ```bash
 python3 -m unittest discover -v
+bash -n scripts/install-terminator-plugin.sh scripts/uninstall-terminator-plugin.sh
 python3 -m compileall terminal_annotator
-python3 -m terminal_annotator.cli.main --help
 ```
 
-Suggested manual checks in Terminator:
+## Adapter Contributions
 
-1. Create a comment with selected shell output and insert pending comments.
-2. Confirm inserted text appears at the prompt without being submitted.
-3. Repeat in split panes and confirm pending comments stay pane-local.
-4. Test inside OpenAI Codex CLI.
-5. Test inside Opencode using `Shift` before text selection.
-6. Optional voice: record a short note, confirm the transcript appears in the comment box before saving, then insert it.
+More terminal adapters are welcome. If you want Terminal Annotator to support another terminal, please open a PR.
 
-## Limitations
+Include this information in the PR:
 
-- Linux and Terminator are the only supported target for now.
-- GTK/PyGObject behavior can vary by distribution and Terminator version.
-- Clipboard fallback for selected-text extraction is best-effort and only used internally when direct selection APIs are unavailable.
-- Shortcut conflicts can still happen if a local Terminator configuration already uses `Ctrl+Shift+A` or `Ctrl+Shift+Y`.
-- Voice transcription requires local recorder tooling and cloud/API credentials.
-- Compatibility with Claude Code, Aider, and other CLI apps has not been verified yet.
+- Terminal emulator name
+- Operating system and version
+- Desktop environment or windowing system, if relevant
+- Terminal version
+- How selected text is read
+- How text is inserted into the active terminal input
+- How a stable pane/session identity is generated
+- Manual test notes for creating, inserting, and clearing comments
+
+Good adapter targets include GNOME Terminal, KDE Konsole, Alacritty, Kitty, WezTerm, iTerm2, Windows Terminal, and other terminals with enough extension or automation support to expose the required hooks.
+
+Adapters should keep terminal-specific code under `terminal_annotator/adapters/<terminal>/` and keep the shared core independent from GUI libraries, terminal emulator APIs, and AI-tool-specific APIs.
+
+## Design Principles
+
+- Terminal first: comments are captured and replayed where the work is happening.
+- Tool agnostic: no Codex, Claude, Aider, or shell-specific hooks are required.
+- User controlled: inserted comments are reviewable text, not automatic submissions.
+- Local by default: state stays on the local machine.
+- Adapter friendly: terminal-specific behavior belongs in adapters, not in core.
 
 ## License
 
-MIT.
+MIT
