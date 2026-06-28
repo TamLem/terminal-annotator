@@ -1,4 +1,4 @@
-"""Terminal-side annotation tools."""
+"""Terminal-side commenting tools."""
 
 __all__ = ["__version__"]
 

@@ -45,7 +45,7 @@ prompt_default() {
 }
 
 configure_voice_interactive() {
-  echo "Configure voice annotation:"
+  echo "Configure voice input for terminal comments:"
   echo "  1) LiteLLM direct/proxy"
   echo "  2) Vercel AI Gateway"
   local choice
@@ -71,7 +71,7 @@ configure_voice_interactive() {
   esac
 }
 
-if prompt_yes_no "Configure optional voice annotation" "y"; then
+if prompt_yes_no "Configure optional voice input" "y"; then
   CONFIGURE_VOICE=1
   configure_voice_interactive
 fi
@@ -141,7 +141,7 @@ fi
 
 echo "Installed Terminal Annotator Terminator plugin."
 if [[ "$CONFIGURE_VOICE" -eq 1 ]]; then
-  echo "Configured voice annotation in $CONFIG_FILE."
+  echo "Configured voice input in $CONFIG_FILE."
 fi
 echo "Restart Terminator, then enable it under Preferences > Plugins."
-echo "Run this installer again if you want to change voice annotation settings."
+echo "Run this installer again if you want to change voice input settings."

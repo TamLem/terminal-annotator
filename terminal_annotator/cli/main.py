@@ -32,7 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("list", help="list known sessions")
 
-    format_parser = subparsers.add_parser("format", help="format pending annotations")
+    format_parser = subparsers.add_parser("format", help="format pending comments")
     format_parser.add_argument("--session", required=True)
     format_parser.add_argument(
         "--mode",
@@ -40,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="ai-review",
     )
 
-    clear_parser = subparsers.add_parser("clear", help="clear annotations for a session")
+    clear_parser = subparsers.add_parser("clear", help="clear comments for a session")
     clear_parser.add_argument("--session", required=True)
 
     cleanup_parser = subparsers.add_parser("cleanup", help="remove old session files")
@@ -53,9 +53,9 @@ def build_parser() -> argparse.ArgumentParser:
     transcribe_parser.add_argument("audio_path")
     transcribe_parser.add_argument("--model")
 
-    add_parser = subparsers.add_parser("add", help="add an annotation for debugging")
+    add_parser = subparsers.add_parser("add", help="add a comment for debugging")
     add_parser.add_argument("--session", required=True)
-    add_parser.add_argument("--text", required=True)
+    add_parser.add_argument("--text", default="")
     add_parser.add_argument("--comment", required=True)
     add_parser.add_argument("--terminal", default="cli")
     add_parser.add_argument("--cwd")
@@ -83,14 +83,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "format":
         text = format_pending_annotations(args.session, mode=args.mode)
         if not text:
-            print(f"No pending annotations for session {args.session}.", file=sys.stderr)
+            print(f"No pending comments for session {args.session}.", file=sys.stderr)
             return 1
         print(text, end="")
         return 0
 
     if args.command == "clear":
         changed = clear_session(args.session)
-        print(f"Cleared {changed} annotations.")
+        print(f"Cleared {changed} comments.")
         return 0
 
     if args.command == "cleanup":

@@ -58,7 +58,25 @@ class CliTests(unittest.TestCase):
         code, stdout, stderr = self.run_cli(["format", "--session", "missing"])
         self.assertEqual(code, 1)
         self.assertEqual(stdout, "")
-        self.assertIn("No pending annotations", stderr)
+        self.assertIn("No pending comments", stderr)
+
+    def test_add_standalone_comment_without_text(self) -> None:
+        code, stdout, stderr = self.run_cli(
+            [
+                "add",
+                "--session",
+                "demo",
+                "--comment",
+                "standalone comment",
+            ]
+        )
+        self.assertEqual(code, 0, stderr)
+        self.assertTrue(stdout.strip())
+
+        code, stdout, stderr = self.run_cli(["format", "--session", "demo"])
+        self.assertEqual(code, 0, stderr)
+        self.assertIn("Terminal comment:", stdout)
+        self.assertIn("standalone comment", stdout)
 
     def test_transcribe_prints_transcript(self) -> None:
         audio_path = os.path.join(self.tempdir.name, "note.wav")

@@ -56,7 +56,7 @@ Tested:
 
 Not yet tested:
 
-- Voice annotation end-to-end in Terminator.
+- Voice input end-to-end in Terminator.
 - Claude Code.
 - Aider.
 - Other interactive CLI apps.
@@ -76,7 +76,7 @@ The tool should work best with CLI apps that allow normal terminal text selectio
 - Keyboard shortcuts:
   - `Ctrl+Shift+A`: create a terminal comment, with selected text used as optional context.
   - `Ctrl+Shift+Y`: insert pending comments.
-- Optional voice annotation:
+- Optional voice input:
   - Record from the comment dialog.
   - Transcribe through LiteLLM.
   - Insert the transcript into the existing comment box before saving.
@@ -99,13 +99,7 @@ Install the Terminator plugin locally:
 ./scripts/install-terminator-plugin.sh
 ```
 
-Install with voice support:
-
-```bash
-./scripts/install-terminator-plugin.sh
-```
-
-The installer is interactive. It asks whether to configure optional voice annotation, then guides you through LiteLLM or Vercel AI Gateway setup.
+The installer is interactive. It asks whether to configure optional voice input, then guides you through LiteLLM or Vercel AI Gateway setup when enabled.
 
 Then fully restart Terminator and enable the plugin under:
 
@@ -127,9 +121,9 @@ Uninstall:
 ./scripts/uninstall-terminator-plugin.sh
 ```
 
-## Voice Annotation
+## Voice Input
 
-Voice annotation is optional. It records audio from the comment dialog, transcribes it through LiteLLM, then inserts the transcript into the normal comment editor so you can review and edit before saving. The comment can be saved with selected terminal context or as a standalone terminal comment when no text is selected.
+Voice input is optional. It records audio from the comment dialog, transcribes it through LiteLLM, then inserts the transcript into the normal comment editor so you can review and edit before saving. The comment can be saved with selected terminal context or as a standalone terminal comment when no text is selected.
 
 The recommended setup is through the interactive install script:
 
@@ -137,7 +131,7 @@ The recommended setup is through the interactive install script:
 ./scripts/install-terminator-plugin.sh
 ```
 
-It copies the plugin files, asks whether to configure voice annotation, and writes:
+It copies the plugin files, asks whether to configure voice input, and writes:
 
 ```text
 ~/.config/terminal-annotator/config.json
@@ -197,6 +191,7 @@ python3 -m terminal_annotator.cli.main --help
 python3 -m terminal_annotator.cli.main --storage-root
 python3 -m terminal_annotator.cli.main list
 python3 -m terminal_annotator.cli.main add --session demo --text "selected output" --comment "my note"
+python3 -m terminal_annotator.cli.main add --session demo --comment "standalone note"
 python3 -m terminal_annotator.cli.main add --session demo --text "selected output" --comment "voice note" --audio-path ./note.wav
 python3 -m terminal_annotator.cli.main transcribe ./note.wav
 python3 -m terminal_annotator.cli.main format --session demo

@@ -166,10 +166,10 @@ Proxy mode:
 Store recorded audio under runtime/cache storage:
 
 ```text
-<storage-root>/audio/<temp-or-annotation-id>.wav
+<storage-root>/audio/<temp-or-comment-id>.wav
 ```
 
-After saving, add voice metadata to the annotation:
+After saving, add voice metadata to the comment:
 
 ```json
 {
@@ -182,7 +182,7 @@ After saving, add voice metadata to the annotation:
 }
 ```
 
-The formatter should continue using `comment`. It should not need special handling for voice annotations in the first implementation.
+The formatter should continue using `comment`. It should not need special handling for voice-backed comments in the first implementation.
 
 ## GTK Dialog Changes
 
@@ -242,7 +242,7 @@ Manual:
 - Transcription failure with typed text already present.
 - Retry with fallback model.
 - Transcript appears in the comment text box before save.
-- Saved voice annotation inserts into terminal input like a normal text annotation.
+- Saved voice comments insert into terminal input like normal typed comments.
 
 ## Open Questions
 
